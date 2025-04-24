@@ -15,7 +15,9 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'mysql'),
+    #'default' => env('DB_CONNECTION', 'mysql'),
+    'default' => env('DB_CONNECTION', 'mongodb'),
+
 
     /*
     |--------------------------------------------------------------------------
@@ -42,6 +44,19 @@ return [
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
         ],
+
+        'mongodb' => [
+        'driver'   => 'mongodb',
+        'host'     => env('DB_HOST', '127.0.0.1'),
+        'port'     => env('DB_PORT', 27017),
+        'database' => env('DB_DATABASE'),
+        'username' => env('DB_USERNAME'),
+        'password' => env('DB_PASSWORD'),
+        'options'  => [
+            'database' => 'admin' // jika butuh autentikasi
+        ]
+    ],
+
 
         'mysql' => [
             'driver' => 'mysql',

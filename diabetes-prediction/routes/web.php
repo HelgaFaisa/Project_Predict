@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\PredictController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -16,3 +16,12 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/predict', function () {
+    return view('predict');
+});
+
+Route::post('/predict', [PredictController::class, 'predict']);
+Route::post('/predict/save', [PredictController::class, 'savePrediction']);
+Route::get('/predict/clear', [PredictController::class, 'clearResult']);
+
