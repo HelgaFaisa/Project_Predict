@@ -1,58 +1,150 @@
 import 'package:flutter/material.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
-  void _goTo(BuildContext context, String page) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Navigasi ke halaman $page')),
-    );
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int selectedIndex = 0;
+
+  void _onItemTapped(int index) {
+    setState(() {
+      selectedIndex = index;
+    });
   }
+
+  final List<Widget> _pages = [
+    Center(child: Text('Grafik Kesehatan', style: TextStyle(fontSize: 18))),
+    Center(child: Text('Riwayat Pemeriksaan', style: TextStyle(fontSize: 18))),
+    Center(child: Text('Edukasi', style: TextStyle(fontSize: 18))),
+    Center(child: Text('Target Hidup sehat', style: TextStyle(fontSize: 18))),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Menu Utama')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          children: [
-            _buildMenu(context, Icons.person, 'Profile'),
-            _buildMenu(context, Icons.bar_chart, 'Laporan'),
-            _buildMenu(context, Icons.settings, 'Pengaturan'),
-            _buildMenu(
-              context,
-              Icons.logout,
-              'Logout',
-              onTap: () => Navigator.pushReplacementNamed(context, '/'),
+      backgroundColor: Colors.white,
+      body: Column(
+        children: [
+          ProfileHeader(),
+          const SizedBox(height: 20),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.0, 0.1),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
+              ),
+              child: _pages[selectedIndex],
             ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: const BoxDecoration(
+          color: Colors.black87,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(40),
+            topRight: Radius.circular(40),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavCircleIcon(Icons.show_chart, 0),
+            _buildNavIcon(Icons.history, 1),
+            _buildNavIcon(Icons.list, 2),
+            _buildNavIcon(Icons.favorite, 3),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMenu(BuildContext context, IconData icon, String title, {VoidCallback? onTap}) {
-    return InkWell(
-      onTap: onTap ?? () => _goTo(context, title),
-      borderRadius: BorderRadius.circular(12),
+  Widget _buildNavCircleIcon(IconData icon, int index) {
+    return GestureDetector(
+      onTap: () => _onItemTapped(index),
       child: Container(
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.blue[50],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.blue),
+          shape: BoxShape.circle,
+          color: selectedIndex == index ? Colors.white : Colors.white24,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 48, color: Colors.blue),
-            const SizedBox(height: 10),
-            Text(title, style: const TextStyle(fontSize: 16)),
-          ],
+        child: Icon(
+          icon,
+          color: selectedIndex == index ? Colors.black87 : Colors.white,
         ),
+      ),
+    );
+  }
+
+  Widget _buildNavIcon(IconData icon, int index) {
+    return GestureDetector(
+      onTap: () => _onItemTapped(index),
+      child: Icon(
+        icon,
+        color: selectedIndex == index ? Colors.white : Colors.white38,
+        size: 28,
+      ),
+    );
+  }
+}
+
+class ProfileHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.black87,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(40),
+          bottomRight: Radius.circular(40),
+        ),
+      ),
+      padding: const EdgeInsets.only(top: 50, left: 24, right: 24, bottom: 40),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Halo Admin',
+                style: TextStyle(
+                  fontSize: 20,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'April, 2025',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white70,
+                ),
+              ),
+            ],
+          ),
+          GestureDetector(
+            onTap: () => Navigator.pushNamed(context, '/profile'),
+            child: const CircleAvatar(
+              radius: 25,
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, color: Colors.black87, size: 40),
+            ),
+          ),
+        ],
       ),
     );
   }
