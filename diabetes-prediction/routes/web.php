@@ -24,4 +24,10 @@ Route::get('/predict', function () {
 Route::post('/predict', [PredictController::class, 'predict']);
 Route::post('/predict/save', [PredictController::class, 'savePrediction']);
 Route::get('/predict/clear', [PredictController::class, 'clearResult']);
+// routes/web.php
+Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
+// route gejala
+Route::get('/kelola-gejala', function () {
+    return view('gejala.index');
+});
 

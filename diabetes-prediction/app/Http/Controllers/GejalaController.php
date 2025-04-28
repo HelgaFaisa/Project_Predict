@@ -1,0 +1,51 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Gejala;
+use Illuminate\Http\Request;
+
+class GejalaController extends Controller
+{
+    public function index()
+    {
+        return Gejala::all();
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string',
+            'weight' => 'required|numeric',
+        ]);
+
+        $gejala = Gejala::create([
+            'name' => $request->name,
+            'weight' => $request->weight,
+            'active' => true,
+        ]);
+
+        return response()->json($gejala);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $gejala = Gejala::findOrFail($id);
+        $gejala->update($request->only(['name', 'weight', 'active']));
+        return response()->json($gejala);
+    }
+
+    public function destroy($id)
+    {
+        Gejala::destroy($id);
+        return response()->json(['message' => 'Gejala deleted']);
+    }
+
+    public function aktif()
+{
+    $gejalaAktif = Gejala::where('active', true)->get(['_id', 'name', 'weight']);
+
+    return response()->json($gejalaAktif);
+}
+
+}
