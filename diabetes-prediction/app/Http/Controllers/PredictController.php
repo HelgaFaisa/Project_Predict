@@ -8,6 +8,10 @@ use MongoDB\Client as Mongo;
 
 class PredictController extends Controller
 {
+    public function index()
+    {
+        return view('admin.prediksi.index');
+    }
     public function predict(Request $request)
     {
         // Ambil data input dari form
@@ -54,5 +58,12 @@ class PredictController extends Controller
     {
         // Cukup redirect ke halaman awal tanpa menyimpan data
         return redirect('/predict');
+    }
+    public function submit(Request $request)
+    {
+        // logic prediksi kamu di sini
+        return response()->json([
+            'message' => 'Prediction processed!'
+        ]);
     }
 }

@@ -1,33 +1,49 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\GejalaController;
+use App\Http\Controllers\Admin\PasienController;
+use App\Http\Controllers\Admin\PengaturanController;
 use App\Http\Controllers\PredictController;
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
-*/
+use App\Http\Controllers\PublicPredictController;
 
 Route::get('/', function () {
     return view('welcome');
-});
+})->name('landing');
 
-Route::get('/predict', function () {
-    return view('predict');
+Route::prefix('predict')->name('predict.')->group(function () {
+    Route::get('/', function () {
+        return view('predict');
+    })->name('form');
+    Route::post('/', [PublicPredictController::class, 'predict'])->name('submit');
+    Route::post('/save', [PublicPredictController::class, 'savePrediction'])->name('save');
+    Route::get('/clear', [PublicPredictController::class, 'clearResult'])->name('clear');
 });
+Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
+            ->middleware('auth') // Pastikan hanya user terautentikasi
+            ->name('logout');
+Route::prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-Route::post('/predict', [PredictController::class, 'predict']);
-Route::post('/predict/save', [PredictController::class, 'savePrediction']);
-Route::get('/predict/clear', [PredictController::class, 'clearResult']);
-// routes/web.php
-Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
-// route gejala
-Route::get('/kelola-gejala', function () {
-    return view('gejala.index');
+    Route::prefix('gejala')->name('gejala.')->group(function () {
+        Route::get('/', [GejalaController::class, 'index'])->name('index');
+        Route::post('/', [GejalaController::class, 'store'])->name('store');
+        Route::get('/{gejala}/edit', [GejalaController::class, 'edit'])->name('edit');
+        Route::put('/{gejala}', [GejalaController::class, 'update'])->name('update');
+        Route::delete('/{gejala}', [GejalaController::class, 'destroy'])->name('destroy');
+        Route::put('/{gejala}/toggle-status', [GejalaController::class, 'toggleStatus'])->name('toggleStatus');
+    });
+
+    Route::prefix('pasien')->name('pasien.')->group(function () {
+        Route::get('/', [PasienController::class, 'index'])->name('index');
+    });
+
+    Route::get('/pengaturan', [PengaturanController::class, 'index'])->name('pengaturan.index');
+
+    Route::prefix('prediksi')->name('prediksi.')->group(function () {
+        Route::get('/', [PredictController::class, 'index'])->name('index');
+        Route::post('/', [PredictController::class, 'submit'])->name('submit');
+        Route::post('/save', [PredictController::class, 'save'])->name('save');
+    });
 });
-

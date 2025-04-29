@@ -9,7 +9,8 @@ class GejalaController extends Controller
 {
     public function index()
     {
-        return Gejala::all();
+        $gejalaList = Gejala::all();
+        return view('admin.gejala.index', compact('gejalaList'));
     }
 
     public function store(Request $request)
@@ -42,10 +43,8 @@ class GejalaController extends Controller
     }
 
     public function aktif()
-{
-    $gejalaAktif = Gejala::where('active', true)->get(['_id', 'name', 'weight']);
-
-    return response()->json($gejalaAktif);
-}
-
+    {
+        $gejalaAktif = Gejala::where('active', true)->get(['_id', 'name', 'weight']);
+        return response()->json($gejalaAktif);
+    }
 }
