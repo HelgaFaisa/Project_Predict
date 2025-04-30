@@ -1,6 +1,38 @@
 import 'package:flutter/material.dart';
+import 'riwayat.dart';
+import 'edukasi.dart';
+import 'targethidup.dart';
 import 'gejala_page.dart';
+import '/model/gejala.dart';
 
+
+void main() {
+  runApp(const MyApp());
+}
+
+// Root App
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Health App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        fontFamily: 'Poppins',
+      ),
+      home: const HomePage(),
+      routes: {
+        '/profile': (context) => const Center(child: Text('Profile Page')),
+      },
+      debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+// Home Page
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -19,19 +51,19 @@ class _HomePageState extends State<HomePage> {
 
   final List<Widget> _pages = [
     const HealthGraphPage(),
-    Center(child: Text('Riwayat Pemeriksaan', style: TextStyle(fontSize: 18))),
-    Center(child: Text('Edukasi', style: TextStyle(fontSize: 18))),
-    Center(child: Text('Target Hidup Sehat', style: TextStyle(fontSize: 18))),
-    GejalaPage(),
+    const RiwayatPemeriksaanPage(),
+    const DiabetesEducationApp(),
+    const TargetHidupSehatPage(),
+    const DiagnosisPage(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
       body: Column(
         children: [
-          if (selectedIndex == 0) ProfileHeader(),
+          if (selectedIndex == 0) const ProfileHeader(),
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 400),
@@ -50,62 +82,252 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 16),
-        child: Container(
-          height: 60,
-          decoration: BoxDecoration(
-            color: Colors.black87,
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: Colors.blue.shade300, width: 1.5),
+      extendBody: true,
+      bottomNavigationBar: FloatingNavBar(
+        selectedIndex: selectedIndex,
+        onItemTapped: _onItemTapped,
+        icons: const [
+          Icons.bar_chart_rounded,
+          Icons.history_rounded,
+          Icons.menu_book_rounded,
+          Icons.favorite_rounded,
+          Icons.medical_services_rounded,
+        ],
+        labels: const [
+          'Grafik',
+          'Riwayat',
+          'Edukasi',
+          'Target',
+          'Gejala',
+        ],
+      ),
+    );
+  }
+}
+
+// Floating Bottom Navigation Bar
+class FloatingNavBar extends StatelessWidget {
+  final int selectedIndex;
+  final Function(int) onItemTapped;
+  final List<IconData> icons;
+  final List<String> labels;
+
+  const FloatingNavBar({
+    Key? key,
+    required this.selectedIndex,
+    required this.onItemTapped,
+    required this.icons,
+    required this.labels,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final itemWidth = (MediaQuery.of(context).size.width - 40) / icons.length;
+    final activeColor = Colors.blue.shade300;
+    final inactiveColor = Colors.white;
+
+    return Container(
+      height: 80,
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      child: Stack(
+        children: [
+          // Navigation bar background
+          Positioned.fill(
+            child: CustomPaint(
+              painter: NavBarPainter(
+                selectedIndex: selectedIndex, 
+                itemCount: icons.length,
+                baseColor: Colors.blue.shade900,
+                gradientColors: [
+                  Colors.blue.shade800,
+                  Colors.blue.shade900,
+                ],
+              ),
+            ),
           ),
-          child: Row(
+          
+          // Selected item indicator circle
+          Positioned(
+            top: 0,
+            left: itemWidth * selectedIndex + (itemWidth - 50) / 2,
+            child: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.4),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Navigation items
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildNavItem(Icons.bar_chart, 0),
-              _buildNavItem(Icons.history, 1),
-              _buildNavItem(Icons.list_alt, 2),
-              _buildNavItem(Icons.favorite, 3),
-              _buildNavItem(Icons.medical_services, 4),
-            ],
+            children: List.generate(
+              icons.length,
+              (index) => _buildNavItem(
+                context, 
+                icons[index], 
+                labels[index],
+                index, 
+                activeColor, 
+                inactiveColor
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildNavItem(IconData icon, int index) {
+  Widget _buildNavItem(
+    BuildContext context, 
+    IconData icon, 
+    String label, 
+    int index, 
+    Color activeColor, 
+    Color inactiveColor
+  ) {
+    final isSelected = selectedIndex == index;
+
     return GestureDetector(
-      onTap: () => _onItemTapped(index),
+      onTap: () => onItemTapped(index),
       child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: selectedIndex == index ? Colors.white : Colors.transparent,
-        ),
-        child: Icon(
-          icon,
-          color: selectedIndex == index ? Colors.black87 : Colors.white,
-          size: 24,
+        width: (MediaQuery.of(context).size.width - 40) / icons.length,
+        height: 80,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              child: Icon(
+                icon,
+                color: isSelected ? activeColor : inactiveColor,
+                size: isSelected ? 26 : 24,
+              ),
+            ),
+            if (isSelected)
+              const SizedBox(height: 4),
+            if (isSelected)
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? activeColor : inactiveColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
 }
 
+// Custom Painter for Bottom Nav Background
+class NavBarPainter extends CustomPainter {
+  final int selectedIndex;
+  final int itemCount;
+  final Color baseColor;
+  final List<Color> gradientColors;
+
+  NavBarPainter({
+    required this.selectedIndex, 
+    required this.itemCount,
+    required this.baseColor,
+    required this.gradientColors,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final width = size.width;
+    final height = size.height;
+    final itemWidth = width / itemCount;
+    
+    final paint = Paint()
+      ..shader = LinearGradient(
+        colors: gradientColors,
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(Rect.fromLTWH(0, 0, width, height))
+      ..style = PaintingStyle.fill;
+
+    final shadowPaint = Paint()
+      ..color = Colors.black.withOpacity(0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+
+    final borderPaint = Paint()
+      ..color = Colors.blue.shade300
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    final path = Path()
+      ..moveTo(20, 0)
+      ..quadraticBezierTo(0, 0, 0, 20)
+      ..lineTo(0, height - 20)
+      ..quadraticBezierTo(0, height, 20, height)
+      ..lineTo(width - 20, height)
+      ..quadraticBezierTo(width, height, width, height - 20)
+      ..lineTo(width, 20)
+      ..quadraticBezierTo(width, 0, width - 20, 0);
+
+    final selectedX = itemWidth * selectedIndex + (itemWidth / 2);
+    const notchRadius = 30.0;
+    const notchHeight = 25.0;
+
+    path.lineTo(selectedX - notchRadius, 0);
+    path.quadraticBezierTo(selectedX, -notchHeight, selectedX + notchRadius, 0);
+    path.close();
+
+    // Draw shadow first
+    canvas.drawPath(path, shadowPaint);
+    
+    // Draw main shape
+    canvas.drawPath(path, paint);
+    
+    // Draw border
+    canvas.drawPath(path, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
+}
+
+// Profile Header
 class ProfileHeader extends StatelessWidget {
+  const ProfileHeader({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.black87,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(40),
-          bottomRight: Radius.circular(40),
-        ),
-        border: Border.all(color: Colors.blue.shade300, width: 1.5),
-      ),
       padding: const EdgeInsets.only(top: 50, left: 24, right: 24, bottom: 30),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.blue.shade700,
+            Colors.blue.shade900,
+          ],
+        ),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(40)),
+        border: Border.all(color: Colors.blue.shade300, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -115,7 +337,7 @@ class ProfileHeader extends StatelessWidget {
               Text(
                 'Halo Naufal!',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 22,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
@@ -132,10 +354,22 @@ class ProfileHeader extends StatelessWidget {
           ),
           GestureDetector(
             onTap: () => Navigator.pushNamed(context, '/profile'),
-            child: const CircleAvatar(
-              radius: 25,
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, color: Colors.black87, size: 30),
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: CircleAvatar(
+                radius: 25,
+                backgroundColor: Colors.white,
+                child: Icon(Icons.person, color: Colors.blue.shade900, size: 30),
+              ),
             ),
           ),
         ],
@@ -144,92 +378,180 @@ class ProfileHeader extends StatelessWidget {
   }
 }
 
+// Health Graph Page
 class HealthGraphPage extends StatelessWidget {
   const HealthGraphPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Grafik Pemeriksaan',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
             ),
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blue.withOpacity(0.2),
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-              border: Border.all(color: Colors.blue.shade100, width: 1),
+          const SizedBox(height: 6),
+          Text(
+            'Pantau kesehatan Anda secara berkala',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Grafik: Glukosa, BMI, Tekanan darah',
+          ),
+          const SizedBox(height: 24),
+          _GraphCard(),
+          const SizedBox(height: 20),
+          _DescriptionCard(),
+          const SizedBox(height: 100), // Untuk jarak dengan floating navbar
+        ],
+      ),
+    );
+  }
+}
+
+class _GraphCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return _CardContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Grafik Parameter Kesehatan',
+                style: TextStyle(
+                  fontSize: 16, 
+                  fontWeight: FontWeight.w600, 
+                  color: Colors.blue.shade800
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Bulanan',
                   style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.blue.shade700,
                   ),
                 ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 200,
-                  child: CustomLineChart(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _LegendItem(color: Colors.purple.shade400, label: 'Glukosa'),
+              const SizedBox(width: 16),
+              _LegendItem(color: Colors.blue.shade400, label: 'BMI'),
+              const SizedBox(width: 16),
+              _LegendItem(color: Colors.green.shade400, label: 'Tekanan Darah'),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const SizedBox(height: 200, child: EnhancedLineChart()),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendItem extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendItem({
+    Key? key,
+    required this.color,
+    required this.label,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[700],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DescriptionCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return _CardContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, size: 20, color: Colors.blue.shade700),
+              const SizedBox(width: 8),
+              const Text(
+                'Keterangan',
+                style: TextStyle(
+                  fontSize: 16, 
+                  fontWeight: FontWeight.bold, 
+                  color: Colors.black87
                 ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Grafik ini menunjukkan tingkat glukosa dan tekanan darah Anda selama periode pengukuran terakhir. Tren menunjukkan fluktuasi yang perlu diperhatikan.',
+            style: TextStyle(
+              fontSize: 14, 
+              color: Colors.grey[700], 
+              height: 1.5
             ),
           ),
           const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blue.withOpacity(0.2),
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-              border: Border.all(color: Colors.blue.shade100, width: 1),
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Keterangan:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                SizedBox(height: 12),
-                Text(
-                  'Grafik ini menunjukkan tingkat glukosa dan tekanan darah Anda selama periode pengukuran terakhir. Tren menunjukkan fluktuasi yang perlu diperhatikan.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
-                    height: 1.5,
+            child: Row(
+              children: [
+                Icon(Icons.tips_and_updates, size: 20, color: Colors.blue.shade600),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Periksa kesehatanmu secara rutin untuk hasil yang lebih akurat',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.blue.shade700,
+                    ),
                   ),
                 ),
               ],
@@ -241,67 +563,177 @@ class HealthGraphPage extends StatelessWidget {
   }
 }
 
-class CustomLineChart extends StatelessWidget {
+class _CardContainer extends StatelessWidget {
+  final Widget child;
+  
+  const _CardContainer({
+    required this.child, 
+    Key? key,
+  }) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(double.infinity, 200),
-      painter: LineChartPainter(),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.blue.shade100, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
     );
   }
 }
 
-class LineChartPainter extends CustomPainter {
+// Enhanced Line Chart
+class EnhancedLineChart extends StatelessWidget {
+  const EnhancedLineChart({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: const Size(double.infinity, 200),
+      painter: EnhancedLineChartPainter(),
+    );
+  }
+}
+
+class EnhancedLineChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final width = size.width;
     final height = size.height;
-    final paint = Paint()
-      ..color = Colors.purple.shade400
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
 
+    // Grid paint
     final gridPaint = Paint()
-      ..color = Colors.grey.withOpacity(0.2)
+      ..color = Colors.grey.withOpacity(0.1)
       ..strokeWidth = 1;
 
+    // Axis labels paint
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+
+    // Draw grid
     for (int i = 0; i <= 5; i++) {
-      double y = height * i / 5;
+      final y = height * i / 5;
       canvas.drawLine(Offset(0, y), Offset(width, y), gridPaint);
+      
+      // Draw Y-axis labels
+      textPainter.text = TextSpan(
+        text: '${100 - (i * 20)}',
+        style: TextStyle(color: Colors.grey[600], fontSize: 10),
+      );
+      textPainter.layout();
+      textPainter.paint(canvas, Offset(-25, y - textPainter.height / 2));
     }
+    
     for (int i = 0; i <= 8; i++) {
-      double x = width * i / 8;
+      final x = width * i / 8;
       canvas.drawLine(Offset(x, 0), Offset(x, height), gridPaint);
+      
+      // Draw X-axis labels
+      final month = _getMonthName(i);
+      textPainter.text = TextSpan(
+        text: month,
+        style: TextStyle(color: Colors.grey[600], fontSize: 10),
+      );
+      textPainter.layout();
+      textPainter.paint(canvas, Offset(x - textPainter.width / 2, height + 5));
     }
 
+    // Draw lines and points for each dataset
+    _drawDataset(canvas, size, Colors.purple.shade400);
+    _drawDataset(canvas, size, Colors.blue.shade400, offset: 0.15);
+    _drawDataset(canvas, size, Colors.green.shade400, offset: -0.1);
+  }
+  
+  void _drawDataset(Canvas canvas, Size size, Color color, {double offset = 0}) {
+    final width = size.width;
+    final height = size.height;
+    
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    
+    final pointPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+      
+    final shadowPaint = Paint()
+      ..color = color.withOpacity(0.15)
+      ..style = PaintingStyle.fill;
+      
+    // Generate slightly different data points for each dataset
     final points = [
-      Offset(width * 0 / 8, height * 0.7),
-      Offset(width * 1 / 8, height * 0.5),
-      Offset(width * 2 / 8, height * 0.6),
-      Offset(width * 3 / 8, height * 0.9),
-      Offset(width * 4 / 8, height * 0.8),
-      Offset(width * 5 / 8, height * 0.4),
-      Offset(width * 6 / 8, height * 0.2),
-      Offset(width * 7 / 8, height * 0.6),
-      Offset(width * 8 / 8, height * 0.3),
+      Offset(width * 0 / 8, height * (0.7 + offset)),
+      Offset(width * 1 / 8, height * (0.5 + offset)),
+      Offset(width * 2 / 8, height * (0.6 + offset)),
+      Offset(width * 3 / 8, height * (0.4 + offset)),
+      Offset(width * 4 / 8, height * (0.5 + offset)),
+      Offset(width * 5 / 8, height * (0.35 + offset)),
+      Offset(width * 6 / 8, height * (0.4 + offset)),
+      Offset(width * 7 / 8, height * (0.2 + offset)),
+      Offset(width * 8 / 8, height * (0.3 + offset)),
     ];
 
-    final path = Path();
-    path.moveTo(points[0].dx, points[0].dy);
+    // Draw line
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
     for (int i = 1; i < points.length; i++) {
-      path.lineTo(points[i].dx, points[i].dy);
+      final p0 = points[i - 1];
+      final p1 = points[i];
+      
+      // Create smooth curve
+      final controlPoint1 = Offset(
+        p0.dx + (p1.dx - p0.dx) / 2,
+        p0.dy,
+      );
+      final controlPoint2 = Offset(
+        p0.dx + (p1.dx - p0.dx) / 2,
+        p1.dy,
+      );
+      
+      path.cubicTo(
+        controlPoint1.dx, controlPoint1.dy,
+        controlPoint2.dx, controlPoint2.dy,
+        p1.dx, p1.dy,
+      );
     }
+    
+    // Draw shadow
+    final shadowPath = Path()..addPath(path, Offset.zero);
+    shadowPath.lineTo(width, height);
+    shadowPath.lineTo(0, height);
+    shadowPath.close();
+    canvas.drawPath(shadowPath, shadowPaint);
+    
+    // Draw line
     canvas.drawPath(path, paint);
-
-    final pointPaint = Paint()
-      ..color = Colors.purple.shade400
-      ..style = PaintingStyle.fill;
-
+    
+    // Draw points
     for (var point in points) {
-      canvas.drawCircle(point, 3, pointPaint);
+      canvas.drawCircle(point, 4, pointPaint);
+      canvas.drawCircle(point, 2, Paint()..color = Colors.white);
     }
+  }
+  
+  String _getMonthName(int index) {
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep'];
+    return index < months.length ? months[index] : '';
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
+  
