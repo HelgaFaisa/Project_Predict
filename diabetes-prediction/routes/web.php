@@ -14,7 +14,7 @@ Route::get('/', function () {
 
 Route::prefix('predict')->name('predict.')->group(function () {
     Route::get('/', function () {
-        return view('predict');
+        return view('admin.prediksi.index');
     })->name('form');
     Route::post('/', [PublicPredictController::class, 'predict'])->name('submit');
     Route::post('/save', [PublicPredictController::class, 'savePrediction'])->name('save');
@@ -43,7 +43,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::prefix('prediksi')->name('prediksi.')->group(function () {
         Route::get('/', [PredictController::class, 'index'])->name('index');
-        Route::post('/', [PredictController::class, 'submit'])->name('submit');
-        Route::post('/save', [PredictController::class, 'save'])->name('save');
+        Route::post('/', [PredictController::class, 'predict'])->name('submit'); // Ubah 'submit' ke 'predict'
+        Route::post('/save', [PredictController::class, 'savePrediction'])->name('save'); // Sesuaikan method
     });
+    
+    
 });

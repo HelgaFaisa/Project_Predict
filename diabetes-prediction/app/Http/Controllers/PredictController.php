@@ -16,19 +16,25 @@ class PredictController extends Controller
     {
         // Ambil data input dari form
         $input = $request->only(['pregnancies', 'glucose', 'blood_pressure', 'bmi', 'age']);
-
+    
         // Kirim data ke API Flask
         $response = Http::post('http://127.0.0.1:5000/predict', $input);
-
-        // Ambil hasil prediksi dari response
-        $result = $response->json();
-
-        // Kirim data dan hasil ke view
-        return view('predict', [
-            'result' => $result['result'],
-            'input' => $input
-        ]);
+    
+        // Cek apakah respons sukses
+        if ($response->successful()) {
+            $result = $response->json();
+    
+            // Tampilkan di halaman yang sama (admin.prediksi.index)
+            return view('admin.prediksi.index', [
+                'result' => $result['result'],
+                'input' => $input
+            ]);
+        }
+    
+        // Jika error dari API
+        return redirect()->route('predict.index')->with('error', 'Gagal menghubungi API prediksi.');
     }
+    
 
     public function savePrediction(Request $request)
     {

@@ -19,28 +19,30 @@ class GejalaController extends Controller
             'name' => 'required|string',
             'weight' => 'required|numeric',
         ]);
-
-        $gejala = Gejala::create([
+    
+        Gejala::create([
             'name' => $request->name,
             'weight' => $request->weight,
             'active' => true,
         ]);
-
-        return response()->json($gejala);
+    
+        return redirect()->route('admin.gejala.index')->with('success', 'Gejala berhasil ditambahkan');
     }
-
+    
     public function update(Request $request, $id)
     {
         $gejala = Gejala::findOrFail($id);
         $gejala->update($request->only(['name', 'weight', 'active']));
-        return response()->json($gejala);
+    
+        return redirect()->route('admin.gejala.index')->with('success', 'Gejala berhasil diperbarui');
     }
-
+    
     public function destroy($id)
     {
         Gejala::destroy($id);
-        return response()->json(['message' => 'Gejala deleted']);
+        return redirect()->route('admin.gejala.index')->with('success', 'Gejala berhasil dihapus');
     }
+    
 
     public function aktif()
     {
