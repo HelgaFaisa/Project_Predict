@@ -50,7 +50,7 @@
             
             {{-- Profile Link --}}
             <li>
-                <a href="{{ route('admin.pengaturan.index') }}" 
+                <a href="{{ route('admin.profile.index') }}" 
                    class="menu-item group flex items-center p-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200">
                     <div class="flex items-center justify-center w-10 h-10">
                         <i class="ph-light ph-user text-xl group-hover:scale-110 transition-transform"></i>
@@ -66,23 +66,6 @@
                 </a>
             </li>
             
-            {{-- Prediction Link --}}
-            <li>
-                <a href="{{ route('admin.prediksi.index') }}" 
-                   class="menu-item group flex items-center p-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200">
-                    <div class="flex items-center justify-center w-10 h-10">
-                        <i class="ri-flask-line text-xl group-hover:scale-110 transition-transform"></i>
-                    </div>
-                    <span class="ml-3 whitespace-nowrap transition-opacity duration-200"
-                          :class="{ 'opacity-0': !sidebarExpanded, 'opacity-100': sidebarExpanded }">
-                        Prediksi Diabetes
-                    </span>
-                    <span class="absolute left-full ml-1 px-2 py-1 bg-gray-900 text-xs text-white rounded-md opacity-0 -translate-x-3 pointer-events-none transition-opacity group-hover:opacity-100 shadow-lg"
-                          x-show="!sidebarExpanded">
-                        Prediksi Diabetes
-                    </span>
-                </a>
-            </li>
             
             {{-- Patients Link --}}
             <li>
@@ -101,6 +84,24 @@
                     </span>
                 </a>
             </li>
+
+            {{-- Prediction Link --}}
+            <li>
+                <a href="{{ route('admin.prediksi.index') }}" 
+                   class="menu-item group flex items-center p-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200">
+                    <div class="flex items-center justify-center w-10 h-10">
+                        <i class="ri-flask-line text-xl group-hover:scale-110 transition-transform"></i>
+                    </div>
+                    <span class="ml-3 whitespace-nowrap transition-opacity duration-200"
+                          :class="{ 'opacity-0': !sidebarExpanded, 'opacity-100': sidebarExpanded }">
+                        Prediksi Diabetes
+                    </span>
+                    <span class="absolute left-full ml-1 px-2 py-1 bg-gray-900 text-xs text-white rounded-md opacity-0 -translate-x-3 pointer-events-none transition-opacity group-hover:opacity-100 shadow-lg"
+                          x-show="!sidebarExpanded">
+                        Prediksi Diabetes
+                    </span>
+                </a>
+            </li>
             
             {{-- Symptoms Link --}}
             <li>
@@ -116,24 +117,6 @@
                     <span class="absolute left-full ml-1 px-2 py-1 bg-gray-900 text-xs text-white rounded-md opacity-0 -translate-x-3 pointer-events-none transition-opacity group-hover:opacity-100 shadow-lg"
                           x-show="!sidebarExpanded">
                         Kelola Gejala
-                    </span>
-                </a>
-            </li>
-            
-            {{-- Settings Link --}}
-            <li>
-                <a href="{{ route('admin.pengaturan.index') }}" 
-                   class="menu-item group flex items-center p-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200">
-                    <div class="flex items-center justify-center w-10 h-10">
-                        <i class="ph-light ph-gear text-xl group-hover:scale-110 transition-transform"></i>
-                    </div>
-                    <span class="ml-3 whitespace-nowrap transition-opacity duration-200"
-                          :class="{ 'opacity-0': !sidebarExpanded, 'opacity-100': sidebarExpanded }">
-                        Pengaturan
-                    </span>
-                    <span class="absolute left-full ml-1 px-2 py-1 bg-gray-900 text-xs text-white rounded-md opacity-0 -translate-x-3 pointer-events-none transition-opacity group-hover:opacity-100 shadow-lg"
-                          x-show="!sidebarExpanded">
-                        Pengaturan
                     </span>
                 </a>
             </li>

@@ -52,23 +52,7 @@
             </div>
         </div>
 
-        {{-- Card 3: Janji Hari Ini --}}
-        <div class="bg-white rounded-xl shadow p-6 hover:shadow-lg transition-shadow border border-gray-200">
-            <div class="flex items-center justify-between">
-                <span class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Janji Hari Ini</span>
-                <div class="p-2 rounded-full bg-green-100 text-green-600">
-                    <i class="ri-calendar-check-line text-xl"></i>
-                </div>
-            </div>
-            <div class="mt-3">
-                <span class="text-4xl font-bold text-gray-800">8</span> {{-- Ganti dengan data dinamis --}}
-                <p class="mt-1 text-xs text-gray-500">
-                    3 Selesai, 5 Menunggu {{-- Ganti dengan data dinamis --}}
-                </p>
-            </div>
-        </div>
-
-         {{-- Card 4: Pasien Risiko Tinggi --}}
+         {{-- Card 3: Pasien Risiko Tinggi --}}
         <div class="bg-white rounded-xl shadow p-6 hover:shadow-lg transition-shadow border border-gray-200">
             <div class="flex items-center justify-between">
                 <span class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Risiko Tinggi</span>
