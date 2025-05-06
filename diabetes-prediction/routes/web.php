@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GejalaController;
 // use App\Http\Controllers\Admin\PengaturanController; // Dihapus karena route pengaturan dihapus
-use App\Http\Controllers\Admin\PredictController;
+use App\Http\Controllers\Admin\PredictController; // Controller yang kita perbaiki
 use App\Http\Controllers\Admin\PatientController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\PublicPredictController;
@@ -36,7 +36,8 @@ Route::prefix('admin')
 
         Route::prefix('prediksi')->name('prediksi.')->group(function () {
             Route::get('/', [PredictController::class, 'index'])->name('index');
-            Route::post('/submit', [PredictController::class, 'submitPrediction'])->name('submit');
+            // PENYESUAIAN DI SINI: 'submitPrediction' diubah menjadi 'predict'
+            Route::post('/submit', [PredictController::class, 'predict'])->name('submit'); // <-- BARIS INI YANG DISESUAIKAN
             Route::post('/save', [PredictController::class, 'savePrediction'])->name('save');
         });
 
