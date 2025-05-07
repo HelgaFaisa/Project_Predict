@@ -182,11 +182,169 @@ class FloatingNavBar extends StatelessWidget {
                 inactiveColor
               ),
             ),
+=======
+
+class BottomNavBar extends StatefulWidget {
+  @override
+  _BottomNavBarState createState() => _BottomNavBarState();
+}
+
+class _BottomNavBarState extends State<BottomNavBar> {
+  int _page = 0;
+
+  final List<IconData> _icons = [
+    Icons.add,
+    Icons.list,
+    Icons.contact_mail,
+    Icons.call,
+    Icons.perm_identity,
+  ];
+
+  final List<String> _labels = [
+    'Add',
+    'List',
+    'Mail',
+    'Call',
+    'Profile',
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _page = index;
+      print('Selected page: $_page');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Custom Floating Nav Bar')),
+      body: Container(
+        color: Colors.blueAccent,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              if (_page == 0) Icon(Icons.add, size: 130, color: Colors.white),
+              if (_page == 1) Icon(Icons.list, size: 130, color: Colors.black),
+              if (_page == 2) Icon(Icons.contact_mail, size: 130, color: Colors.white),
+              if (_page == 3) Icon(Icons.call, size: 130, color: Colors.black),
+              if (_page == 4) Icon(Icons.perm_identity, size: 130, color: Colors.white),
+              Text(_page.toString(), textScaleFactor: 5),
+              ElevatedButton(
+                child: Text('Go To Page of index 0'),
+                onPressed: () {
+                  setState(() {
+                    _page = 0;
+                  });
+                },
+              )
+            ],
+
+          ),
+        ],
+      ),
+      extendBody: true,
+      bottomNavigationBar: FloatingNavBar(
+        selectedIndex: _page,
+        onItemTapped: _onItemTapped,
+        icons: _icons,
+        labels: _labels,
+      ),
+    );
+  }
+}
+
+class FloatingNavBar extends StatelessWidget {
+  final int selectedIndex;
+  final Function(int) onItemTapped;
+  final List<IconData> icons;
+  final List<String> labels;
+
+  const FloatingNavBar({
+    Key? key,
+    required this.selectedIndex,
+    required this.onItemTapped,
+    required this.icons,
+    required this.labels,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final itemWidth = (MediaQuery.of(context).size.width - 40) / icons.length;
+    final activeColor = Colors.blue.shade300;
+    final inactiveColor = Colors.white;
+
+    return Container(
+      height: 80,
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      child: Stack(
+        children: [
+          // Navigation bar background
+          Positioned.fill(
+            child: CustomPaint(
+              painter: NavBarPainter(
+                selectedIndex: selectedIndex,
+                itemCount: icons.length,
+                baseColor: Colors.blue.shade900,
+                gradientColors: [
+                  Colors.blue.shade800,
+                  Colors.blue.shade900,
+                ],
+              ),
+            ),
+          ),
+          // Selected item indicator circle
+          Positioned(
+            top: 0,
+            left: itemWidth * selectedIndex + (itemWidth - 50) / 2,
+            child: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.4),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Navigation items
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(
+              icons.length,
+              (index) => _buildNavItem(
+                context,
+                icons[index],
+                labels[index],
+                index,
+                activeColor,
+                inactiveColor,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildNavItem(
+    BuildContext context,
+    IconData icon,
+    String label,
+    int index,
+    Color activeColor,
+    Color inactiveColor,
+  ) {
+    final isSelected = selectedIndex == index;
+
 
   Widget _buildNavItem(
     BuildContext context, 
@@ -197,6 +355,7 @@ class FloatingNavBar extends StatelessWidget {
     Color inactiveColor
   ) {
     final isSelected = selectedIndex == index;
+
 
     return GestureDetector(
       onTap: () => onItemTapped(index),
@@ -215,7 +374,11 @@ class FloatingNavBar extends StatelessWidget {
               ),
             ),
             if (isSelected)
+
               const SizedBox(height: 4),
+=======
+              const SizedBox(height: 20),
+
             if (isSelected)
               Text(
                 label,
@@ -232,7 +395,10 @@ class FloatingNavBar extends StatelessWidget {
   }
 }
 
+
 // Custom Painter for Bottom Nav Background
+=======
+
 class NavBarPainter extends CustomPainter {
   final int selectedIndex;
   final int itemCount;
@@ -240,7 +406,11 @@ class NavBarPainter extends CustomPainter {
   final List<Color> gradientColors;
 
   NavBarPainter({
+
     required this.selectedIndex, 
+=======
+    required this.selectedIndex,
+
     required this.itemCount,
     required this.baseColor,
     required this.gradientColors,
@@ -248,6 +418,7 @@ class NavBarPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+
     final width = size.width;
     final height = size.height;
     final itemWidth = width / itemCount;
@@ -300,6 +471,41 @@ class NavBarPainter extends CustomPainter {
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
+
+=======
+    final Paint paint = Paint()
+      ..color = baseColor
+      ..style = PaintingStyle.fill;
+
+    final Rect rect = Rect.fromLTRB(0, 0, size.width, size.height);
+    final RRect rRect = RRect.fromRectAndRadius(rect, Radius.circular(30));
+
+    canvas.drawRRect(rRect, paint);
+
+    // Draw gradient under the selected item
+    final double itemWidth = size.width / itemCount;
+    final double xPos = itemWidth * selectedIndex;
+    final Rect selectedRect = Rect.fromLTRB(xPos, 0, xPos + itemWidth, size.height);
+
+    final Gradient gradient = LinearGradient(
+      colors: gradientColors,
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+
+    paint.shader = gradient.createShader(selectedRect);
+    canvas.drawRRect(RRect.fromRectAndRadius(selectedRect, Radius.circular(30)), paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) {
+    return false;
+  }
+}
+
+// Custom Painter for Bottom Nav Background
+
+
 
 // Profile Header
 class ProfileHeader extends StatelessWidget {
