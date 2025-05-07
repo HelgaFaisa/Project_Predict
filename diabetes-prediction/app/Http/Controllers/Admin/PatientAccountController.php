@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log; // Untuk logging
 
 class PatientAccountController extends Controller
 {
@@ -40,7 +41,8 @@ class PatientAccountController extends Controller
     {
         $validatedData = $request->validate([
             'patient_id' => 'required|string|exists:patients,_id|unique:patient_accounts,patient_id',
-            'name' => 'required|string|max:255',
+            // 'name' akan diambil dari data pasien, jadi tidak perlu validasi di sini jika di-set otomatis
+            // 'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:patient_accounts,email',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'phone_number' => 'nullable|string|max:20',
@@ -52,16 +54,23 @@ class PatientAccountController extends Controller
             return back()->with('error', 'Pasien tidak ditemukan.')->withInput();
         }
 
-        PatientAccount::create([
-            'patient_id' => $validatedData['patient_id'],
-            'name' => $patient->name, // Ambil nama dari data pasien
-            'email' => $validatedData['email'],
-            'password' => $validatedData['password'], // Sudah otomatis di-hash oleh $casts di model
-            'phone_number' => $validatedData['phone_number'],
-            'status' => $validatedData['status'],
-        ]);
+        try {
+            PatientAccount::create([
+                'patient_id' => $validatedData['patient_id'],
+                'name' => $patient->name, // Ambil nama dari data pasien
+                'email' => $validatedData['email'],
+                'password' => $validatedData['password'], // Sudah otomatis di-hash oleh $casts di model
+                'phone_number' => $validatedData['phone_number'],
+                'status' => $validatedData['status'],
+            ]);
 
-        return redirect()->route('admin.patient_accounts.index')->with('success', 'Akun pasien berhasil dibuat.');
+            // PERBAIKAN DI SINI: Gunakan tanda hubung
+            return redirect()->route('admin.patient-accounts.index')->with('success', 'Akun pasien berhasil dibuat.');
+
+        } catch (\Exception $e) {
+            Log::error('Error creating patient account: ' . $e->getMessage(), ['request_data' => $request->all()]);
+            return back()->with('error', 'Gagal membuat akun pasien. Terjadi kesalahan internal.')->withInput();
+        }
     }
 
     public function edit(PatientAccount $patientAccount)
@@ -79,9 +88,9 @@ class PatientAccountController extends Controller
     public function update(Request $request, PatientAccount $patientAccount)
     {
         $validatedData = $request->validate([
-            'patient_id' => ['required','string','exists:patients,_id', Rule::unique('patient_accounts','patient_id')->ignore($patientAccount->id)],
-            'name' => 'required|string|max:255',
-            'email' => ['required','string','email','max:255', Rule::unique('patient_accounts','email')->ignore($patientAccount->id)],
+            'patient_id' => ['required','string','exists:patients,_id', Rule::unique('patient_accounts','patient_id')->ignore($patientAccount->_id, '_id')], // Gunakan $patientAccount->_id
+            // 'name' akan diambil dari data pasien
+            'email' => ['required','string','email','max:255', Rule::unique('patient_accounts','email')->ignore($patientAccount->_id, '_id')], // Gunakan $patientAccount->_id
             'password' => ['nullable', 'confirmed', Rules\Password::defaults()],
             'phone_number' => 'nullable|string|max:20',
             'status' => 'required|string|in:active,inactive',
@@ -104,16 +113,25 @@ class PatientAccountController extends Controller
             $dataToUpdate['password'] = $validatedData['password']; // Sudah otomatis di-hash
         }
 
-        $patientAccount->update($dataToUpdate);
-
-        return redirect()->route('admin.patient_accounts.index')->with('success', 'Akun pasien berhasil diperbarui.');
+        try {
+            $patientAccount->update($dataToUpdate);
+            // PERBAIKAN DI SINI: Gunakan tanda hubung
+            return redirect()->route('admin.patient-accounts.index')->with('success', 'Akun pasien berhasil diperbarui.');
+        } catch (\Exception $e) {
+            Log::error('Error updating patient account: ' . $e->getMessage(), ['account_id' => $patientAccount->_id, 'request_data' => $request->all()]);
+            return back()->with('error', 'Gagal memperbarui akun pasien. Terjadi kesalahan internal.')->withInput();
+        }
     }
 
     public function destroy(PatientAccount $patientAccount)
     {
-        // Pertimbangkan apa yang terjadi jika akun dihapus, apakah data pasien juga?
-        // Untuk saat ini, hanya akun yang dihapus.
-        $patientAccount->delete();
-        return redirect()->route('admin.patient_accounts.index')->with('success', 'Akun pasien berhasil dihapus.');
+        try {
+            $patientAccount->delete();
+            // PERBAIKAN DI SINI: Gunakan tanda hubung
+            return redirect()->route('admin.patient-accounts.index')->with('success', 'Akun pasien berhasil dihapus.');
+        } catch (\Exception $e) {
+            Log::error('Error deleting patient account: ' . $e->getMessage(), ['account_id' => $patientAccount->_id]);
+            return redirect()->route('admin.patient-accounts.index')->with('error', 'Gagal menghapus akun pasien. Terjadi kesalahan internal.');
+        }
     }
 }

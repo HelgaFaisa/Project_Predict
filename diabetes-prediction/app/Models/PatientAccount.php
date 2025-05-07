@@ -2,18 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail; // Jika ingin verifikasi email
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use MongoDB\Laravel\Auth\User as Authenticatable; // Gunakan Authenticatable dari MongoDB
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens; // Untuk API Token jika login mobile via Sanctum
 
-class PatientAccount extends Authenticatable // extends Authenticatable
+class PatientAccount extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $connection = 'mongodb';
-    protected $collection = 'patient_accounts';
+    protected $connection = 'mongodb'; // Pastikan ini sesuai dengan koneksi MongoDB Anda
+    protected $collection = 'patient_accounts'; // Pastikan nama collection ini benar
 
     /**
      * The attributes that are mass assignable.
@@ -21,12 +21,12 @@ class PatientAccount extends Authenticatable // extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'patient_id', // Untuk relasi ke data pasien di collection 'patients'
-        'name',       // Bisa diambil dari data pasien terkait
-        'email',      // Digunakan untuk login, harus unik
+        'patient_id',       // Foreign key ke collection 'patients'
+        'name',             // Nama akun, bisa sama dengan nama pasien
+        'email',            // Email untuk login, harus unik
         'password',
-        'phone_number', // Opsional
-        'status',     // Misal: active, inactive, suspended
+        'phone_number',     // Opsional
+        'status',           // Misal: active, inactive
         'last_login_at',
         'profile_photo_path', // Opsional
     ];
@@ -53,11 +53,13 @@ class PatientAccount extends Authenticatable // extends Authenticatable
     ];
 
     /**
-     * Relasi ke data detail pasien.
+     * Mendefinisikan relasi belongsTo ke model Patient.
+     * Satu akun pasien dimiliki oleh satu data pasien.
      */
-// Dalam app/Models/Patient.php
-public function patientAccount()
-{
-    return $this->hasOne(PatientAccount::class, 'patient_id', '_id');
-}
+    public function patient()
+    {
+        // Argumen kedua adalah foreign key di collection 'patient_accounts' (yaitu 'patient_id')
+        // Argumen ketiga adalah owner key (primary key '_id') di collection 'patients'
+        return $this->belongsTo(Patient::class, 'patient_id', '_id');
+    }
 }

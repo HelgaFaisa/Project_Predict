@@ -18,7 +18,7 @@
         </div>
     @endif
 
-    <form action="{{ route('admin.patient_accounts.store') }}" method="POST">
+    <form action="{{ route('admin.patient-accounts.store') }}" method="POST">
         @include('admin.patient_accounts._form')
     </form>
 </div>

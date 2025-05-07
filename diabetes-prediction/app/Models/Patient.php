@@ -2,50 +2,69 @@
 
 namespace App\Models;
 
-use MongoDB\Laravel\Eloquent\Model as Eloquent;
-// Carbon tidak perlu di-use di sini jika hanya dipakai via $casts['...'] => 'datetime'
-// use Carbon\Carbon;
+// Pastikan Anda menggunakan Model yang benar untuk MongoDB Anda
+// Jika menggunakan mongodb/laravel-mongodb:
+use MongoDB\Laravel\Eloquent\Model;
+// Jika menggunakan jenssegers/mongodb:
+// use Jenssegers\Mongodb\Eloquent\Model;
+use Carbon\Carbon; // Jika Anda melakukan casting tanggal atau manipulasi
 
-class Patient extends Eloquent
+class Patient extends Model
 {
-    protected $connection = 'mongodb'; // pastikan koneksi sesuai config/database.php
-    protected $collection = 'patients'; // nama koleksi di MongoDB
+    /**
+     * Koneksi database yang digunakan model.
+     * Opsional jika koneksi default Anda sudah 'mongodb'.
+     */
+    // protected $connection = 'mongodb';
 
     /**
-     * Atribut yang diizinkan untuk diisi secara massal.
-     * Sesuaikan daftar ini dengan field di formulir dan database Anda.
-     *
-     * @var array<int, string>
+     * Nama collection MongoDB yang digunakan oleh model.
+     */
+    protected $collection = 'patients'; // Sesuaikan jika nama collection berbeda
+
+    /**
+     * Atribut yang dapat diisi secara massal (mass assignable).
      */
     protected $fillable = [
         'name',
-        'date_of_birth',
+        'date_of_birth', // Pastikan ini ada jika digunakan untuk kalkulasi umur
         'gender',
-        'contact_number',
-        'email',
+        'contact_number', // Sesuaikan dengan field Anda
+        'email',          // Email pasien (bukan email login akun)
         'address',
-        // Tambahkan field lain dari form jika ada
+        // Tambahkan field lain yang relevan dari form kelola pasien Anda
     ];
 
     /**
-     * Tentukan bagaimana atribut harus di-cast.
-     *
-     * @var array<string, string>
+     * Atribut yang harus di-cast ke tipe data native.
      */
     protected $casts = [
-        // Cast 'date_of_birth' menjadi objek Carbon saat diakses,
-        // dan simpan sebagai UTCDateTime di MongoDB
         'date_of_birth' => 'datetime',
-
-        // Contoh lain jika perlu:
-        // 'some_numeric_field' => 'integer',
-        // 'is_active' => 'boolean',
-        // 'options' => 'array',
+        'created_at' => 'datetime', // Jika Anda menggunakan timestamp Eloquent
+        'updated_at' => 'datetime',
     ];
 
     /**
-     * Eloquent secara default mengelola timestamps 'created_at' dan 'updated_at'.
-     * Jika Anda tidak menginginkannya, uncomment baris di bawah ini:
-     * public $timestamps = false;
+     * Mendefinisikan relasi one-to-one ke model PatientAccount.
+     * Satu pasien memiliki satu akun login.
      */
+    public function patientAccount()
+    {
+        // Argumen kedua adalah foreign key di collection 'patient_accounts' (yaitu 'patient_id')
+        // Argumen ketiga adalah local key (primary key '_id') di collection 'patients'
+        return $this->hasOne(PatientAccount::class, 'patient_id', '_id');
+    }
+
+    /**
+     * Accessor untuk menghitung umur pasien.
+     *
+     * @return int|null
+     */
+    public function getAgeAttribute()
+    {
+        if ($this->date_of_birth) {
+            return Carbon::parse($this->date_of_birth)->age;
+        }
+        return null;
+    }
 }

@@ -83,7 +83,7 @@
         <i class="ri-save-line mr-2 -ml-1"></i>
         {{ isset($account) ? 'Simpan Perubahan' : 'Buat Akun' }}
     </button>
-    <a href="{{ route('admin.patient_accounts.index') }}"
+    <a href="{{ route('admin.patient-accounts.index') }}"
        class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-25 transition">
         Batal
     </a>

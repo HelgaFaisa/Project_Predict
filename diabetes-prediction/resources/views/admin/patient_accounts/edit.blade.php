@@ -18,7 +18,7 @@
         </div>
     @endif
 
-    <form action="{{ route('admin.patient_accounts.update', $patientAccount) }}" method="POST">
+    <form action="{{ route('admin.patient-accounts.update', $patientAccount) }}" method="POST">
         @method('PUT')
         @include('admin.patient_accounts._form', ['account' => $patientAccount])
     </form>
