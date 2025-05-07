@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
         '/biodata': (context) => BiodataFormPage(), // Halaman biodata setelah register
         '/home': (context) => HomePage(),
         '/riwayat_pemeriksaan': (context) => RiwayatPemeriksaanPage(), // Menambahkan halaman Riwayat Pemeriksaan
-        '/edukasi': (context) => DiabetesEducationApp(),
+        '/edukasi': (context) => EdukasiPage(),
         '/targethidup': (context) => TargetHidupSehatPage(),
         '/gejala': (context) => DiagnosisPage(),
       },

@@ -52,7 +52,7 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> _pages = [
     const HealthGraphPage(),
     const RiwayatPemeriksaanPage(),
-    const DiabetesEducationApp(),
+    EdukasiPage(),
     const TargetHidupSehatPage(),
     const DiagnosisPage(),
   ];
