@@ -3,13 +3,13 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GejalaController;
-// use App\Http\Controllers\Admin\PengaturanController; // Dihapus karena route pengaturan dihapus
-use App\Http\Controllers\Admin\PredictController; // Controller yang kita perbaiki
+use App\Http\Controllers\Admin\PredictController; 
 use App\Http\Controllers\Admin\PatientController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\PublicPredictController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Admin\EducationArticleController;
+use App\Http\Controllers\Admin\PatientAccountController;
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
@@ -55,8 +55,9 @@ Route::prefix('admin')
             'education' => 'educationArticle' // Memberitahu Laravel nama parameter untuk route model binding
         ]);
 
-
-        // Route::get('/pengaturan', [PengaturanController::class, 'index'])->name('pengaturan.index'); // Baris ini dihapus
+        Route::resource('patient-accounts', PatientAccountController::class)->parameters([
+            'patient-accounts' => 'patientAccount' // Untuk route model binding
+        ]);
 
         Route::resource('profile', ProfileController::class);
 
