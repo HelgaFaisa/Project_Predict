@@ -1,7 +1,7 @@
 <?php
 
-namespace App\Http\Controllers;
-
+namespace App\Http\Controllers\Admin; // <-- TAMBAHKAN \Admin
+use App\Http\Controllers\Controller; // <-- TAMBAHKAN BARIS INI
 use App\Models\Gejala;
 use Illuminate\Http\Request;
 
