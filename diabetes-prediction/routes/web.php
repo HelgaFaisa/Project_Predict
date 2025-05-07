@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\PatientController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\PublicPredictController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Admin\EducationArticleController;
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
@@ -49,6 +50,11 @@ Route::prefix('admin')
             Route::delete('/{gejala}', [GejalaController::class, 'destroy'])->name('destroy');
             Route::put('/{gejala}/toggle-status', [GejalaController::class, 'toggleStatus'])->name('toggleStatus');
         });
+
+        Route::resource('education', EducationArticleController::class)->parameters([
+            'education' => 'educationArticle' // Memberitahu Laravel nama parameter untuk route model binding
+        ]);
+
 
         // Route::get('/pengaturan', [PengaturanController::class, 'index'])->name('pengaturan.index'); // Baris ini dihapus
 
