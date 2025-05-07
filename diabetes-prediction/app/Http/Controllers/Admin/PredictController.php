@@ -7,17 +7,19 @@ use App\Models\Patient;
 use App\Models\PredictionHistory; // Asumsi Anda punya model ini untuk menyimpan riwayat
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http; // Jika memanggil API eksternal
-use Carbon\Carbon; // Untuk kalkulasi umur jika diperlukan di backend juga
+use Illuminate\Support\Facades\Log; // Untuk logging error
+use Carbon\Carbon;
 
 class PredictController extends Controller
 {
     // Method untuk menampilkan form prediksi
-    public function index() // Atau nama method Anda, misal create()
+    public function index()
     {
         $patients = Patient::select('_id', 'id', 'name', 'date_of_birth') // Pastikan date_of_birth diambil
                            ->orderBy('name', 'asc')
                            ->get();
-        $input = session('prediction_input'); // Ambil input dari session jika ada (setelah redirect dari predict)
+        // Ambil data dari session flash jika ada (setelah redirect dari method predict)
+        $input = session('prediction_input');
         $result = session('prediction_result');
         $selected_patient_name = session('selected_patient_name');
 
@@ -25,7 +27,8 @@ class PredictController extends Controller
     }
 
     // Method untuk submit prediksi (yang dipanggil oleh form action)
-    public function submitPrediction(Request $request) // Ganti nama method jika berbeda
+    // NAMA METHOD DIUBAH KE 'predict'
+    public function predict(Request $request)
     {
         $validatedData = $request->validate([
             'patient_id'     => 'required|string|exists:patients,_id',
@@ -34,67 +37,77 @@ class PredictController extends Controller
             'blood_pressure' => 'required|numeric|min:0',
             'height'         => 'required|numeric|min:1', // Validasi Tinggi Badan
             'weight'         => 'required|numeric|min:1', // Validasi Berat Badan
-            // 'bmi' tidak perlu divalidasi dari input karena dihitung
-            // 'age' tidak perlu divalidasi dari input karena dihitung
+            // 'bmi' dan 'age' akan dihitung, jadi tidak perlu validasi dari input langsung form ini
         ]);
 
-        // Ambil data pasien untuk menghitung umur di backend (sebagai fallback atau verifikasi)
         $patient = Patient::find($validatedData['patient_id']);
         if (!$patient || !$patient->date_of_birth) {
-            return back()->with('error', 'Data tanggal lahir pasien tidak ditemukan.')->withInput();
+            Log::warning('Predict attempt for patient without birth date.', ['patient_id' => $validatedData['patient_id']]);
+            return back()->with('error', 'Data tanggal lahir pasien tidak ditemukan atau tidak valid. Harap perbarui data pasien.')->withInput();
         }
 
         // Hitung Umur di backend
-        $birthDate = Carbon::parse($patient->date_of_birth);
-        $age = $birthDate->age;
+        try {
+            $birthDate = Carbon::parse($patient->date_of_birth);
+            $age = $birthDate->age;
+            if ($age < 0) { // Handle kasus tanggal lahir di masa depan
+                Log::warning('Predict attempt with invalid birth date (future).', ['patient_id' => $patient->_id, 'birth_date' => $patient->date_of_birth]);
+                return back()->with('error', 'Tanggal lahir pasien tidak valid.')->withInput();
+            }
+        } catch (\Exception $e) {
+            Log::error('Error parsing birth date for age calculation.', ['patient_id' => $patient->_id, 'error' => $e->getMessage()]);
+            return back()->with('error', 'Gagal memproses tanggal lahir pasien.')->withInput();
+        }
+
 
         // Hitung BMI di backend
         $heightInMeters = $validatedData['height'] / 100;
         $bmi = ($heightInMeters > 0) ? $validatedData['weight'] / ($heightInMeters * $heightInMeters) : 0;
         $bmi = round($bmi, 2);
 
-
-        // Siapkan data untuk dikirim ke API prediksi (jika ada)
-        // API mungkin membutuhkan BMI dan Umur, bukan TB & BB & Tgl Lahir
+        // Siapkan data untuk dikirim ke API prediksi
         $dataForApi = [
             'pregnancies'    => (int)$validatedData['pregnancies'],
             'glucose'        => (float)$validatedData['glucose'],
             'blood_pressure' => (float)$validatedData['blood_pressure'],
-            'bmi'            => (float)$bmi, // Kirim BMI yang sudah dihitung
-            'age'            => (int)$age,   // Kirim Umur yang sudah dihitung
-            // 'skin_thickness' => (float)$request->input('skin_thickness', 0), // Contoh field lain jika ada
-            // 'insulin'        => (float)$request->input('insulin', 0),        // Contoh field lain jika ada
-            // 'diabetes_pedigree_function' => (float)$request->input('diabetes_pedigree_function', 0), // Contoh
+            'bmi'            => (float)$bmi,
+            'age'            => (int)$age,
+            // Tambahkan field lain yang mungkin dibutuhkan API Anda, contoh:
+            // 'skin_thickness' => (float)$request->input('skin_thickness_api', 0), // Ambil dari input tersembunyi jika perlu
+            // 'insulin'        => (float)$request->input('insulin_api', 0),
+            // 'diabetes_pedigree_function' => (float)$request->input('dpf_api', 0),
         ];
 
-        // Panggil API prediksi Anda
         $predictionResult = null;
         try {
             // $apiResponse = Http::post(config('services.prediction_api.url'), $dataForApi);
             // if ($apiResponse->successful()) {
-            //     $predictionResult = $apiResponse->json()['result'] ?? 0; // Sesuaikan dengan response API Anda
+            //     $predictionResult = $apiResponse->json()['result'] ?? 0;
             // } else {
+            //     Log::error('API Prediction Failed.', ['status' => $apiResponse->status(), 'body' => $apiResponse->body()]);
             //     return back()->with('error', 'Gagal mendapatkan prediksi dari API. Status: ' . $apiResponse->status())->withInput();
             // }
-            // Untuk testing tanpa API:
-            $predictionResult = rand(0,1); // Hasil dummy
 
+            // Untuk testing tanpa API:
+            Log::info('Dummy prediction executed.', ['data_for_api' => $dataForApi]);
+            $predictionResult = rand(0,1);
+
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error("API Prediction Connection Error: " . $e->getMessage());
+            return back()->with('error', 'Tidak dapat terhubung ke server prediksi. Mohon coba beberapa saat lagi.')->withInput();
         } catch (\Exception $e) {
-            // Log::error("API Prediction Error: " . $e->getMessage());
+            Log::error("General API Prediction Error: " . $e->getMessage());
             return back()->with('error', 'Terjadi kesalahan saat menghubungi layanan prediksi.')->withInput();
         }
 
-
-        // Simpan semua input yang relevan (termasuk yang dihitung) untuk ditampilkan kembali
+        // Simpan semua input yang relevan untuk ditampilkan kembali
         $inputToDisplay = array_merge($validatedData, [
             'bmi' => $bmi,
             'age' => $age,
         ]);
 
-
-        // Redirect kembali ke halaman form dengan hasil dan input
-        // Menggunakan session flash untuk data ini lebih baik daripada query string
-        return redirect()->route('admin.prediksi.index') // Kembali ke halaman form prediksi
+        // Redirect kembali ke halaman form dengan hasil dan input menggunakan session flash
+        return redirect()->route('admin.prediksi.index')
                          ->with('prediction_result', $predictionResult)
                          ->with('prediction_input', $inputToDisplay)
                          ->with('selected_patient_name', $patient->name);
@@ -103,7 +116,6 @@ class PredictController extends Controller
     // Method untuk menyimpan hasil prediksi
     public function savePrediction(Request $request)
     {
-        // Validasi data yang diterima dari form hasil (yang berisi hidden input)
         $validatedData = $request->validate([
             'patient_id'     => 'required|string|exists:patients,_id',
             'pregnancies'    => 'required|integer|min:0',
@@ -116,48 +128,15 @@ class PredictController extends Controller
             'result'         => 'required|numeric|in:0,1',
         ]);
 
-        // Tambahkan timestamp
         $dataToSave = $validatedData;
-        $dataToSave['prediction_timestamp'] = now();
+        $dataToSave['prediction_timestamp'] = now(); // Eloquent akan menangani format Carbon ke BSON UTCDateTime
 
-        // Simpan ke collection prediction_histories (atau nama collection Anda)
-        // Jika menggunakan Eloquent untuk PredictionHistory:
         try {
             PredictionHistory::create($dataToSave);
             return redirect()->route('admin.prediksi.index')->with('success', 'Hasil prediksi berhasil disimpan.');
         } catch (\Exception $e) {
-            // Log::error("Save Prediction Error: " . $e->getMessage());
-            return redirect()->route('admin.prediksi.index')->with('error', 'Gagal menyimpan hasil prediksi.')->withInput();
+            Log::error("Save Prediction Error: " . $e->getMessage(), ['data' => $dataToSave]);
+            return redirect()->route('admin.prediksi.index')->with('error', 'Gagal menyimpan hasil prediksi. Terjadi kesalahan internal.')->withInput();
         }
-
-        // Jika menggunakan MongoDB Driver langsung (seperti di kode Anda sebelumnya):
-        /*
-        try {
-            $mongoUri = env('DB_URI', 'mongodb://localhost:27017');
-            $mongo = new \MongoDB\Client($mongoUri);
-            $dbName = env('DB_DATABASE', 'nama_database_anda');
-            $collectionName = 'prediction_histories'; // Sesuaikan
-            $collection = $mongo->$dbName->$collectionName;
-
-            $dataToSaveMongo = [
-                'patient_id'     => $validatedData['patient_id'],
-                'pregnancies'    => (int) $validatedData['pregnancies'],
-                'glucose'        => (float) $validatedData['glucose'],
-                'blood_pressure' => (float) $validatedData['blood_pressure'],
-                'height'         => (float) $validatedData['height'],
-                'weight'         => (float) $validatedData['weight'],
-                'bmi'            => (float) $validatedData['bmi'],
-                'age'            => (int) $validatedData['age'],
-                'result'         => (int) $validatedData['result'],
-                'prediction_timestamp' => new \MongoDB\BSON\UTCDateTime()
-            ];
-            $collection->insertOne($dataToSaveMongo);
-            return redirect()->route('admin.prediksi.index')->with('success', 'Hasil prediksi berhasil disimpan.');
-
-        } catch (\Exception $e) {
-            // Log::error("Save Prediction Error (MongoDB Driver): " . $e->getMessage());
-            return redirect()->route('admin.prediksi.index')->with('error', 'Gagal menyimpan hasil prediksi.')->withInput();
-        }
-        */
     }
 }
