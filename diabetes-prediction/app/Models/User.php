@@ -2,30 +2,32 @@
 
 namespace App\Models;
 
-use MongoDB\Laravel\Auth\User as Authenticatable;
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+// Gunakan Authenticatable dari package MongoDB yang Anda pakai
+use MongoDB\Laravel\Auth\User as Authenticatable; // Untuk mongodb/laravel-mongodb
+// use Jenssegers\Mongodb\Auth\User as Authenticatable; // Alternatif jika pakai jenssegers
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
+use Laravel\Sanctum\HasApiTokens; // Jika Anda berencana menggunakan API
 
-class User extends Authenticatable
+class User extends Authenticatable // Pastikan extends dari Authenticatable MongoDB
 {
-    use HasApiTokens, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
-     * Nama koneksi database (harus 'mongodb' sesuai config).
-     *
-     * @var string
+     * Koneksi database yang digunakan model.
+     * Opsional jika koneksi default Anda sudah 'mongodb'.
      */
     protected $connection = 'mongodb';
 
     /**
-     * Nama collection MongoDB (opsional jika sesuai default).
-     *
-     * @var string
+     * Nama collection MongoDB yang digunakan oleh model.
+     * Defaultnya adalah 'users'.
      */
-    protected $collection = 'users';
+    protected $collection = 'users'; // Atau 'admins', 'doctors', sesuaikan
 
     /**
-     * Atribut yang bisa diisi secara massal.
+     * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
@@ -33,10 +35,11 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        // Tambahkan field lain jika perlu, misal: 'role', 'specialization'
     ];
 
     /**
-     * Atribut yang disembunyikan saat serialisasi.
+     * The attributes that should be hidden for serialization.
      *
      * @var array<int, string>
      */
@@ -46,12 +49,14 @@ class User extends Authenticatable
     ];
 
     /**
-     * Atribut yang dikonversi ke tipe lain.
+     * The attributes that should be cast.
      *
      * @var array<string, string>
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        // 'password' => 'hashed', // Matikan jika hash manual di seeder
+        'password' => 'hashed', // Otomatis hash password saat diset/dibuat
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 }

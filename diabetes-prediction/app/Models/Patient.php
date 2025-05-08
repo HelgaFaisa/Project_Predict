@@ -2,68 +2,46 @@
 
 namespace App\Models;
 
-// Pastikan Anda menggunakan Model yang benar untuk MongoDB Anda
-// Jika menggunakan mongodb/laravel-mongodb:
 use MongoDB\Laravel\Eloquent\Model;
-// Jika menggunakan jenssegers/mongodb:
-// use Jenssegers\Mongodb\Eloquent\Model;
-use Carbon\Carbon; // Jika Anda melakukan casting tanggal atau manipulasi
+use Carbon\Carbon;
 
 class Patient extends Model
 {
-    /**
-     * Koneksi database yang digunakan model.
-     * Opsional jika koneksi default Anda sudah 'mongodb'.
-     */
     // protected $connection = 'mongodb';
+    protected $collection = 'patients';
 
-    /**
-     * Nama collection MongoDB yang digunakan oleh model.
-     */
-    protected $collection = 'patients'; // Sesuaikan jika nama collection berbeda
-
-    /**
-     * Atribut yang dapat diisi secara massal (mass assignable).
-     */
     protected $fillable = [
         'name',
-        'date_of_birth', // Pastikan ini ada jika digunakan untuk kalkulasi umur
+        'nik', // <-- Tambahkan NIK
+        'date_of_birth',
         'gender',
-        'contact_number', // Sesuaikan dengan field Anda
-        'email',          // Email pasien (bukan email login akun)
+        // 'email', // <-- Hapus
+        // 'contact_number', // <-- Hapus
         'address',
-        // Tambahkan field lain yang relevan dari form kelola pasien Anda
     ];
 
-    /**
-     * Atribut yang harus di-cast ke tipe data native.
-     */
     protected $casts = [
         'date_of_birth' => 'datetime',
-        'created_at' => 'datetime', // Jika Anda menggunakan timestamp Eloquent
+        'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
 
-    /**
-     * Mendefinisikan relasi one-to-one ke model PatientAccount.
-     * Satu pasien memiliki satu akun login.
-     */
     public function patientAccount()
     {
-        // Argumen kedua adalah foreign key di collection 'patient_accounts' (yaitu 'patient_id')
-        // Argumen ketiga adalah local key (primary key '_id') di collection 'patients'
         return $this->hasOne(PatientAccount::class, 'patient_id', '_id');
     }
 
-    /**
-     * Accessor untuk menghitung umur pasien.
-     *
-     * @return int|null
-     */
+     public function predictionHistories()
+    {
+        return $this->hasMany(PredictionHistory::class, 'patient_id', '_id');
+    }
+
     public function getAgeAttribute()
     {
         if ($this->date_of_birth) {
-            return Carbon::parse($this->date_of_birth)->age;
+            // Pastikan date_of_birth adalah objek Carbon
+            $birthDate = $this->date_of_birth instanceof Carbon ? $this->date_of_birth : Carbon::parse($this->date_of_birth);
+            return $birthDate->age;
         }
         return null;
     }
