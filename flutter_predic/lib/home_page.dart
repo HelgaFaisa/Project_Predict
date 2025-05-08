@@ -52,7 +52,7 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> _pages = [
     const HealthGraphPage(),
     const RiwayatPemeriksaanPage(),
-    const DiabetesEducationApp(),
+    EdukasiPage(),
     const TargetHidupSehatPage(),
     const DiagnosisPage(),
   ];
@@ -106,83 +106,6 @@ class _HomePageState extends State<HomePage> {
 }
 
 // Floating Bottom Navigation Bar
-class FloatingNavBar extends StatelessWidget {
-  final int selectedIndex;
-  final Function(int) onItemTapped;
-  final List<IconData> icons;
-  final List<String> labels;
-
-  const FloatingNavBar({
-    Key? key,
-    required this.selectedIndex,
-    required this.onItemTapped,
-    required this.icons,
-    required this.labels,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final itemWidth = (MediaQuery.of(context).size.width - 40) / icons.length;
-    final activeColor = Colors.blue.shade300;
-    final inactiveColor = Colors.white;
-
-    return Container(
-      height: 80,
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      child: Stack(
-        children: [
-          // Navigation bar background
-          Positioned.fill(
-            child: CustomPaint(
-              painter: NavBarPainter(
-                selectedIndex: selectedIndex, 
-                itemCount: icons.length,
-                baseColor: Colors.blue.shade900,
-                gradientColors: [
-                  Colors.blue.shade800,
-                  Colors.blue.shade900,
-                ],
-              ),
-            ),
-          ),
-          
-          // Selected item indicator circle
-          Positioned(
-            top: 0,
-            left: itemWidth * selectedIndex + (itemWidth - 50) / 2,
-            child: Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(0.4),
-                    blurRadius: 12,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          
-          // Navigation items
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(
-              icons.length,
-              (index) => _buildNavItem(
-                context, 
-                icons[index], 
-                labels[index],
-                index, 
-                activeColor, 
-                inactiveColor
-              ),
-            ),
-=======
 
 class BottomNavBar extends StatefulWidget {
   @override
@@ -240,9 +163,8 @@ class _BottomNavBarState extends State<BottomNavBar> {
                 },
               )
             ],
-
           ),
-        ],
+        ),
       ),
       extendBody: true,
       bottomNavigationBar: FloatingNavBar(
@@ -345,18 +267,6 @@ class FloatingNavBar extends StatelessWidget {
   ) {
     final isSelected = selectedIndex == index;
 
-
-  Widget _buildNavItem(
-    BuildContext context, 
-    IconData icon, 
-    String label, 
-    int index, 
-    Color activeColor, 
-    Color inactiveColor
-  ) {
-    final isSelected = selectedIndex == index;
-
-
     return GestureDetector(
       onTap: () => onItemTapped(index),
       child: Container(
@@ -374,11 +284,7 @@ class FloatingNavBar extends StatelessWidget {
               ),
             ),
             if (isSelected)
-
-              const SizedBox(height: 4),
-=======
               const SizedBox(height: 20),
-
             if (isSelected)
               Text(
                 label,
@@ -395,10 +301,6 @@ class FloatingNavBar extends StatelessWidget {
   }
 }
 
-
-// Custom Painter for Bottom Nav Background
-=======
-
 class NavBarPainter extends CustomPainter {
   final int selectedIndex;
   final int itemCount;
@@ -406,11 +308,7 @@ class NavBarPainter extends CustomPainter {
   final List<Color> gradientColors;
 
   NavBarPainter({
-
-    required this.selectedIndex, 
-=======
     required this.selectedIndex,
-
     required this.itemCount,
     required this.baseColor,
     required this.gradientColors,
@@ -418,61 +316,6 @@ class NavBarPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-
-    final width = size.width;
-    final height = size.height;
-    final itemWidth = width / itemCount;
-    
-    final paint = Paint()
-      ..shader = LinearGradient(
-        colors: gradientColors,
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Rect.fromLTWH(0, 0, width, height))
-      ..style = PaintingStyle.fill;
-
-    final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-
-    final borderPaint = Paint()
-      ..color = Colors.blue.shade300
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-
-    final path = Path()
-      ..moveTo(20, 0)
-      ..quadraticBezierTo(0, 0, 0, 20)
-      ..lineTo(0, height - 20)
-      ..quadraticBezierTo(0, height, 20, height)
-      ..lineTo(width - 20, height)
-      ..quadraticBezierTo(width, height, width, height - 20)
-      ..lineTo(width, 20)
-      ..quadraticBezierTo(width, 0, width - 20, 0);
-
-    final selectedX = itemWidth * selectedIndex + (itemWidth / 2);
-    const notchRadius = 30.0;
-    const notchHeight = 25.0;
-
-    path.lineTo(selectedX - notchRadius, 0);
-    path.quadraticBezierTo(selectedX, -notchHeight, selectedX + notchRadius, 0);
-    path.close();
-
-    // Draw shadow first
-    canvas.drawPath(path, shadowPaint);
-    
-    // Draw main shape
-    canvas.drawPath(path, paint);
-    
-    // Draw border
-    canvas.drawPath(path, borderPaint);
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => true;
-}
-
-=======
     final Paint paint = Paint()
       ..color = baseColor
       ..style = PaintingStyle.fill;
@@ -504,7 +347,6 @@ class NavBarPainter extends CustomPainter {
 }
 
 // Custom Painter for Bottom Nav Background
-
 
 
 // Profile Header
@@ -942,4 +784,3 @@ class EnhancedLineChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
-  
