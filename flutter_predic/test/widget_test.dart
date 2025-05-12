@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_predic/login_page.dart'; // Ganti juga jika perlu
+import 'package:flutter_predic/login/login_page.dart'; // Ganti juga jika perlu
 import 'package:flutter_predic/home_page.dart';
 
 void main() {

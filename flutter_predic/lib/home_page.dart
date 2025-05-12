@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'riwayat.dart';
-import 'edukasi.dart';
-import 'targethidup.dart';
+import 'riwayatpemeriksaan/riwayat.dart';
+import 'edukasi/edukasi.dart';
+import 'target/targethidup.dart';
 import 'gejala_page.dart';
 import '/model/gejala.dart';
 
@@ -20,6 +20,7 @@ class MyApp extends StatelessWidget {
       title: 'Health App',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: Colors.blue[50], // Setting default scaffold background
         visualDensity: VisualDensity.adaptivePlatformDensity,
         fontFamily: 'Poppins',
       ),
@@ -49,19 +50,30 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  final List<Widget> _pages = [
+   final List<Widget> _pages = [
     const HealthGraphPage(),
-    const RiwayatPemeriksaanPage(),
+    RiwayatScreen(pasienId: 1), // Ganti 1 dengan fungsi untuk mendapatkan ID pengguna saat ini
     EdukasiPage(),
     const TargetHidupSehatPage(),
-    const DiagnosisPage(),
+    DiagnosisPage(),
   ];
 
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: Column(
+ Widget build(BuildContext context) {
+  return Scaffold(
+    // Use a Container with decoration instead of backgroundColor
+    backgroundColor: Colors.transparent, // Make Scaffold transparent
+    body: Container(
+      // Apply the gradient as decoration
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.blue[300]!, Colors.blue[50]!],
+        ),
+      ),
+      child: Column(
         children: [
           if (selectedIndex == 0) const ProfileHeader(),
           Expanded(
@@ -70,7 +82,7 @@ class _HomePageState extends State<HomePage> {
               transitionBuilder: (child, animation) => FadeTransition(
                 opacity: animation,
                 child: SlideTransition(
-                  position: Tween<Offset>(
+                  position: Tween(
                     begin: const Offset(0.0, 0.1),
                     end: Offset.zero,
                   ).animate(animation),
@@ -82,6 +94,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
+    ),
       extendBody: true,
       bottomNavigationBar: FloatingNavBar(
         selectedIndex: selectedIndex,
@@ -106,7 +119,6 @@ class _HomePageState extends State<HomePage> {
 }
 
 // Floating Bottom Navigation Bar
-
 class BottomNavBar extends StatefulWidget {
   @override
   _BottomNavBarState createState() => _BottomNavBarState();
@@ -143,16 +155,16 @@ class _BottomNavBarState extends State<BottomNavBar> {
     return Scaffold(
       appBar: AppBar(title: Text('Custom Floating Nav Bar')),
       body: Container(
-        color: Colors.blueAccent,
+        color: Colors.blue[50], // Changed to light blue
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              if (_page == 0) Icon(Icons.add, size: 130, color: Colors.white),
-              if (_page == 1) Icon(Icons.list, size: 130, color: Colors.black),
-              if (_page == 2) Icon(Icons.contact_mail, size: 130, color: Colors.white),
-              if (_page == 3) Icon(Icons.call, size: 130, color: Colors.black),
-              if (_page == 4) Icon(Icons.perm_identity, size: 130, color: Colors.white),
+              if (_page == 0) Icon(Icons.add, size: 130, color: Colors.blue[700]),
+              if (_page == 1) Icon(Icons.list, size: 130, color: Colors.blue[800]),
+              if (_page == 2) Icon(Icons.contact_mail, size: 130, color: Colors.blue[700]),
+              if (_page == 3) Icon(Icons.call, size: 130, color: Colors.blue[800]),
+              if (_page == 4) Icon(Icons.perm_identity, size: 130, color: Colors.blue[700]),
               Text(_page.toString(), textScaleFactor: 5),
               ElevatedButton(
                 child: Text('Go To Page of index 0'),
@@ -346,9 +358,6 @@ class NavBarPainter extends CustomPainter {
   }
 }
 
-// Custom Painter for Bottom Nav Background
-
-
 // Profile Header
 class ProfileHeader extends StatelessWidget {
   const ProfileHeader({Key? key}) : super(key: key);
@@ -485,7 +494,7 @@ class _GraphCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: const Color.fromARGB(255, 141, 202, 246),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -626,7 +635,7 @@ class _CardContainer extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.blue.shade100, width: 1),
+        border: Border.all(color: const Color.fromARGB(255, 142, 198, 243), width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.blue.withOpacity(0.1),

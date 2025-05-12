@@ -27,6 +27,6 @@ Route::put('/gejala/{id}', [GejalaController::class, 'update']);
 Route::delete('/gejala/{id}', [GejalaController::class, 'destroy']);
 Route::get('/gejala/aktif', [GejalaController::class, 'aktif']);
 Route::post('/hasil_diagnosis', 'App\Http\Controllers\DiagnosisController@store');
-// Route::get('/riwayat/{id_pasien}', [PemeriksaanController::class, 'riwayat']);
+Route::get('/riwayat/{id_pasien}', [PemeriksaanController::class, 'riwayat']);
 Route::get('/edukasi', [EdukasiApiController::class, 'index']);
 
