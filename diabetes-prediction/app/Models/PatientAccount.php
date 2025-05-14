@@ -7,8 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use MongoDB\Laravel\Auth\User as Authenticatable; // Gunakan Authenticatable dari MongoDB
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens; // Untuk API Token jika login mobile via Sanctum
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-class PatientAccount extends Authenticatable
+class PatientAccount extends Authenticatable implements JWTSubject
 {
     use HasApiTokens, HasFactory, Notifiable;
 
@@ -46,10 +47,14 @@ class PatientAccount extends Authenticatable
      *
      * @var array<string, string>
      */
+    // protected $casts = [
+    //     'email_verified_at' => 'datetime',
+    //     'last_login_at' => 'datetime',
+    //     'password' => 'hashed', // Otomatis hash saat diset
+    // ];
     protected $casts = [
-        'email_verified_at' => 'datetime',
         'last_login_at' => 'datetime',
-        'password' => 'hashed', // Otomatis hash saat diset
+        'password' => 'hashed', // Laravel >= 10 akan otomatis hash password
     ];
 
     /**
@@ -62,4 +67,14 @@ class PatientAccount extends Authenticatable
         // Argumen ketiga adalah owner key (primary key '_id') di collection 'patients'
         return $this->belongsTo(Patient::class, 'patient_id', '_id');
     }
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims()
+    {
+        return [];
+    }
+
 }

@@ -14,7 +14,7 @@ return [
     */
 
     'defaults' => [
-        'guard' => 'web',
+        'guard' => 'api',
         'passwords' => 'users',
     ],
 
@@ -36,11 +36,11 @@ return [
     */
 
     'guards' => [
-        'web' => [
-            'driver' => 'session',
-            'provider' => 'users',
-        ],
+    'api' => [
+        'driver' => 'jwt',
+        'provider' => 'patients',
     ],
+],
 
     /*
     |--------------------------------------------------------------------------
@@ -59,11 +59,19 @@ return [
     |
     */
 
+    // 'providers' => [
+    //     'users' => [
+    //         'driver' => 'eloquent',
+    //         'model' => App\Models\User::class,
+    //     ],
+
     'providers' => [
-        'users' => [
-            'driver' => 'eloquent',
-            'model' => App\Models\User::class,
-        ],
+    'patients' => [
+        'driver' => 'eloquent',
+        'model' => App\Models\PatientAccount::class,
+    ],
+
+        
 
         // 'users' => [
         //     'driver' => 'database',
