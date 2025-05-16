@@ -2,68 +2,60 @@
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | Authentication Defaults
-    |--------------------------------------------------------------------------
-    */
+    /* ----------------------------------------------------
+     | Default guard & password reset
+     | --------------------------------------------------*/
     'defaults' => [
-    'guard' => 'web', // default untuk web
-    'passwords' => 'users',
-],
+        'guard'     => 'web',      // admin-web pakai session
+        'passwords' => 'users',
+    ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Authentication Guards
-    |--------------------------------------------------------------------------
-    */
+    /* ----------------------------------------------------
+     | Guards
+     | --------------------------------------------------*/
     'guards' => [
-    'web' => [
-        'driver' => 'session',
-        'provider' => 'users',
+
+        // 1)  Admin-web  (session)
+        'web' => [
+            'driver'   => 'session',
+            'provider' => 'users',
+        ],
+
+        // 2)  Pasien-mobile  (JWT)
+        'api' => [
+            'driver'   => 'jwt',
+            'provider' => 'patients',
+        ],
     ],
 
-    'api' => [
-        'driver' => 'jwt',
-        'provider' => 'patients',
-    ],
-],
-
-    /*
-    |--------------------------------------------------------------------------
-    | User Providers
-    |--------------------------------------------------------------------------
-    */
+    /* ----------------------------------------------------
+     | User Providers
+     | --------------------------------------------------*/
     'providers' => [
-    'users' => [
-        'driver' => 'eloquent',
-        'model' => App\Models\User::class,
+
+        // tabel/collection admin
+        'users' => [
+            'driver' => 'eloquent',
+            'model'  => App\Models\User::class,
+        ],
+
+        // collection patient_accounts
+        'patients' => [
+            'driver' => 'eloquent',
+            'model'  => App\Models\PatientAccount::class,
+        ],
     ],
 
-    'patients' => [
-        'driver' => 'eloquent',
-        'model' => App\Models\PatientAccount::class,
-    ],
-],
-    /*
-    |--------------------------------------------------------------------------
-    | Resetting Passwords
-    |--------------------------------------------------------------------------
-    */
+    /* ----------------------------------------------------
+     | Password reset (optional)
+     | --------------------------------------------------*/
     'passwords' => [
         'patients' => [
             'provider' => 'patients',
             'table'    => 'password_reset_tokens',
             'expire'   => 60,
-            'throttle' => 60,
         ],
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Password Confirmation Timeout
-    |--------------------------------------------------------------------------
-    */
     'password_timeout' => 10800,
-
 ];
