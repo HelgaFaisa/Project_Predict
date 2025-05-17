@@ -1,97 +1,62 @@
 import 'package:flutter/material.dart';
-import '../api/riwayat_api.dart'; // Ganti dengan path yang benar
-import '../model/pemeriksaan_model.dart'; // Ganti dengan path yang benar
+import '../api/riwayat_api.dart';
+import '../model/riwayat_model.dart'; // Pastikan path ke model Riwayat benar
 
-class RiwayatScreen extends StatefulWidget {
-  final int pasienId;
-
-  RiwayatScreen({required this.pasienId});
-
+class RiwayatPage extends StatefulWidget {
   @override
-  _RiwayatScreenState createState() => _RiwayatScreenState();
+  _RiwayatPageState createState() => _RiwayatPageState();
 }
 
-class _RiwayatScreenState extends State<RiwayatScreen> {
-  late RiwayatApi _riwayatApi;
-  List<Pemeriksaan> _riwayat = [];
-  bool _isLoading = true;
-  String _errorMessage = '';
+class _RiwayatPageState extends State<RiwayatPage> {
+  late Future<List<PrediksiRiwayat>> _riwayatFuture;
 
   @override
   void initState() {
     super.initState();
-    _riwayatApi = RiwayatApi(); // Tidak perlu base URL di sini jika sudah di dalam kelas RiwayatApi
-    _fetchRiwayat();
-  }
-
-  Future<void> _fetchRiwayat() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
-    try {
-      final List<Pemeriksaan> fetchedRiwayat = await _riwayatApi.getRiwayat(widget.pasienId);
-      setState(() {
-        _riwayat = fetchedRiwayat;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Terjadi kesalahan saat memuat riwayat: $e';
-      });
-    }
+    _riwayatFuture = RiwayatApi.getCurrentUserHistory();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Riwayat Pemeriksaan'),
+        title: const Text('Riwayat Pemeriksaan'),
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : _errorMessage.isNotEmpty
-              ? Center(child: Text(_errorMessage))
-              : _riwayat.isEmpty
-                  ? Center(child: Text('Tidak ada riwayat pemeriksaan untuk pasien ini.'))
-                  : ListView.builder(
-                      itemCount: _riwayat.length,
-                      itemBuilder: (context, index) {
-                        final Pemeriksaan pemeriksaan = _riwayat[index];
-                        return Card(
-                          margin: EdgeInsets.all(8.0),
-                          child: Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text(
-                                  'Tanggal: ${pemeriksaan.tanggal.toLocal().toString().split(' ')[0]}',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                SizedBox(height: 8.0),
-                                if (pemeriksaan.gejala != null && pemeriksaan.gejala!.isNotEmpty)
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      Text('Gejala:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                      for (var entry in pemeriksaan.gejala!.entries)
-                                        Text('- ${entry.key}: ${entry.value}'),
-                                      SizedBox(height: 8.0),
-                                    ],
-                                  ),
-                                if (pemeriksaan.skor != null)
-                                  Text('Skor: ${pemeriksaan.skor!.toStringAsFixed(2)}'),
-                                if (pemeriksaan.hasil != null && pemeriksaan.hasil!.isNotEmpty)
-                                  Text('Hasil: ${pemeriksaan.hasil}'),
-                                // Tambahkan tampilan untuk field lain dari model Pemeriksaan
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+      body: FutureBuilder<List<PrediksiRiwayat>>(
+        future: _riwayatFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('Belum ada riwayat pemeriksaan.'));
+          } else {
+            return ListView.builder(
+              itemCount: snapshot.data!.length,
+              itemBuilder: (context, index) {
+                final riwayat = snapshot.data![index];
+                return Card(
+                  margin: const EdgeInsets.all(8.0),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Tanggal: ${riwayat.createdAt}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        Text('Gejala: ${riwayat.symptoms ?? '-'}'),
+                        Text('Hasil Prediksi: ${riwayat.predictionResult ?? '-'}'),
+                        // Tambahkan detail lain sesuai model Riwayat Anda
+                      ],
                     ),
+                  ),
+                );
+              },
+            );
+          }
+        },
+      ),
     );
   }
 }

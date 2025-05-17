@@ -92,7 +92,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 
                 // Judul aplikasi dengan efek shadow
                 Text(
-                  'Diabetes Chingu',
+                  'DiabetaCare',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,

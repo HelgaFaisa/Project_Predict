@@ -4,6 +4,10 @@ import 'edukasi/edukasi.dart';
 import 'target/targethidup.dart';
 import 'gejala_page.dart';
 import '/model/gejala.dart';
+import 'logindokter/login.dart';
+import '../api/riwayat_api.dart';
+import 'api/login_api.dart';
+
 
 
 void main() {
@@ -52,7 +56,7 @@ class _HomePageState extends State<HomePage> {
 
    final List<Widget> _pages = [
     const HealthGraphPage(),
-    RiwayatScreen(pasienId: 1), // Ganti 1 dengan fungsi untuk mendapatkan ID pengguna saat ini
+    RiwayatPage(), // Ganti 1 dengan fungsi untuk mendapatkan ID pengguna saat ini
     EdukasiPage(),
     const TargetHidupSehatPage(),
     DiagnosisPage(),
