@@ -6,6 +6,9 @@ import 'logindokter/login.dart'; // Import LoginPage
 import '../riwayatpemeriksaan/riwayat.dart';
 import '../api/riwayat_api.dart';
 import 'api/login_api.dart';
+import '../edukasi/edukasi.dart';
+import '../edukasi/ArtikelDetailPage.dart';
+import '../api/edukasi_api.dart';
 void main() {
   runApp(MyApp());
 }
@@ -27,6 +30,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginPage(),
         '/home': (context) => HomePage(),
         '/riwayat': (context) => RiwayatPage(),
+        '/edukasi': (context) => EdukasiPage(),
       },
     );
   }

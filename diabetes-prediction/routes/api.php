@@ -34,6 +34,7 @@ Route::get('/gejala/aktif', [GejalaController::class, 'aktif']);
 Route::post('/hasil_diagnosis', 'App\Http\Controllers\DiagnosisController@store');
 // Route::get('/riwayat/{id_pasien}', [PemeriksaanController::class, 'riwayat']);
 Route::get('/edukasi', [EdukasiApiController::class, 'index']);
+Route::get('/edukasi/{id}', [EdukasiApiController::class, 'show']);
 //Route::get('/prediction-history/{accountId}', [PredictionHistoryController::class, 'getByAccountId']);
 Route::get('/prediction-history/{accountId}', [PredictionHistoryApiController::class, 'getByAccountId']);
 // login

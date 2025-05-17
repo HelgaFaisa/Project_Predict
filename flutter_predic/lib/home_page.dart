@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'riwayatpemeriksaan/riwayat.dart';
 import 'edukasi/edukasi.dart';
 import 'target/targethidup.dart';
-import 'gejala_page.dart';
+import '../gejala/gejala_page.dart';
 import '/model/gejala.dart';
 import 'logindokter/login.dart';
 import '../api/riwayat_api.dart';
 import 'api/login_api.dart';
+import '../edukasi/edukasi.dart';
+import '../edukasi/ArtikelDetailPage.dart';
+import '../api/edukasi_api.dart';
 
 
 
