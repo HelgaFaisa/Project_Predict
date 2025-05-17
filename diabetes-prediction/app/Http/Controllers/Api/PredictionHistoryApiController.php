@@ -82,12 +82,15 @@ class PredictionHistoryApiController extends Controller
     private function formatHistoriesData($histories)
     {
         return $histories->map(function($history) {
+            // Menentukan hasil prediksi dengan memprioritaskan prediction_result
+            $predictionResult = $this->normalizePredictionResult($history->prediction_result, $history->result);
+            
             // Pastikan tipe data sesuai dengan yang diharapkan di Flutter
             return [
                 'id' => (string) $history->_id, // Pastikan id dikirim sebagai string
                 'patient_id' => (string) $history->patient_id, // Pastikan patient_id dikirim sebagai string
                 'symptoms' => $history->symptoms,
-                'prediction_result' => $history->prediction_result,
+                'prediction_result' => $predictionResult, // Hasil prediksi yang sudah dinormalisasi
                 'pregnancies' => (int) $history->pregnancies,
                 'glucose' => (int) $history->glucose,
                 'blood_pressure' => (int) $history->blood_pressure,
@@ -95,11 +98,50 @@ class PredictionHistoryApiController extends Controller
                 'weight' => (int) $history->weight,
                 'bmi' => (float) $history->bmi,
                 'age' => (int) $history->age,
-                'result' => $history->result,
+                'result' => $predictionResult, // Menyamakan result dengan prediction_result
                 'created_at' => $history->created_at->toIso8601String(),
                 'updated_at' => $history->updated_at->toIso8601String(),
                 'prediction_timestamp' => $history->prediction_timestamp->toIso8601String(),
             ];
         });
+    }
+    
+    /**
+     * Normalisasi hasil prediksi untuk format yang konsisten
+     */
+    private function normalizePredictionResult($predictionResult, $result)
+    {
+        // Coba gunakan prediction_result terlebih dahulu jika ada
+        if (!empty($predictionResult)) {
+            $value = strtolower($predictionResult);
+            
+            // Normalisasi format nilai
+            if ($value == '1' || $value == 'true' || $value == 't' || $value == 'yes' || $value == 'y' || $value == 'positif' || $value == 'positive') {
+                return 'Positif';
+            } elseif ($value == '0' || $value == 'false' || $value == 'f' || $value == 'no' || $value == 'n' || $value == 'negatif' || $value == 'negative') {
+                return 'Negatif';
+            }
+            
+            // Jika tidak cocok dengan format yang dikenal, kembalikan nilai aslinya
+            return $predictionResult;
+        }
+        
+        // Jika prediction_result kosong, coba gunakan result
+        if (!empty($result)) {
+            $value = strtolower($result);
+            
+            // Normalisasi format nilai
+            if ($value == '1' || $value == 'true' || $value == 't' || $value == 'yes' || $value == 'y' || $value == 'positif' || $value == 'positive') {
+                return 'Positif';
+            } elseif ($value == '0' || $value == 'false' || $value == 'f' || $value == 'no' || $value == 'n' || $value == 'negatif' || $value == 'negative') {
+                return 'Negatif';
+            }
+            
+            // Jika tidak cocok dengan format yang dikenal, kembalikan nilai aslinya
+            return $result;
+        }
+        
+        // Jika keduanya kosong, kembalikan '-'
+        return '-';
     }
 }
