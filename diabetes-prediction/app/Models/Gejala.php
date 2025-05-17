@@ -12,10 +12,17 @@ class Gejala extends Model
     protected $connection = 'mongodb'; // pastikan ini ada
     protected $collection = 'gejala';
 
-    protected $fillable = ['name', 'weight', 'active'];
+    protected $fillable   = ['kode', 'nama', 'mb', 'md', 'aktif'];
 
+    // default nilai
+    protected $attributes = [
+        'aktif' => true,
+    ];
+
+    // casting numerik
     protected $casts = [
-        'active' => 'boolean',
-        'weight' => 'float'
+        'mb'   => 'float',
+        'md'   => 'float',
+        'aktif'=> 'boolean',
     ];
 }

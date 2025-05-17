@@ -1,52 +1,130 @@
 <?php
 
-namespace App\Http\Controllers\Admin; // <-- TAMBAHKAN \Admin
-use App\Http\Controllers\Controller; // <-- TAMBAHKAN BARIS INI
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller; // Import class Controller
 use App\Models\Gejala;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\View\View;
+use Illuminate\Http\RedirectResponse;
 
 class GejalaController extends Controller
 {
-    public function index()
+    /**
+     * Display a listing of the gejala.
+     *
+     * @return View
+     */
+    public function index(): View
     {
-        $gejalaList = Gejala::all();
-        return view('admin.gejala.index', compact('gejalaList'));
+        $gejalaList = Gejala::orderBy('kode')->paginate(10);
+        return view('admin.gejala.index', compact('gejalaList')); // Perbaikan nama view
     }
 
-    public function store(Request $request)
+    /**
+     * Show the form for creating a new gejala.
+     *
+     * @return View
+     */
+    public function create(): View
     {
-        $request->validate([
-            'name' => 'required|string',
-            'weight' => 'required|numeric',
-        ]);
-    
-        Gejala::create([
-            'name' => $request->name,
-            'weight' => $request->weight,
-            'active' => true,
-        ]);
-    
-        return redirect()->route('admin.gejala.index')->with('success', 'Gejala berhasil ditambahkan');
+        return view('admin.gejala.form'); // Perbaikan nama view
     }
-    
-    public function update(Request $request, $id)
+
+    /**
+     * Store a newly created gejala in storage.
+     *
+     * @param Request $request
+     * @return RedirectResponse
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'nama' => 'required|string|max:255',
+            'mb' => 'required|numeric|between:0,1',
+            'md' => 'required|numeric|between:0,1',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        $last = Gejala::orderBy('kode', 'desc')->first();
+        $num = $last ? ((int) substr($last->kode, 1)) + 1 : 1;
+        $kode = 'G' . str_pad($num, 2, '0', STR_PAD_LEFT);
+
+        Gejala::create([
+            'kode' => $kode,
+            'nama' => $request->nama,
+            'mb' => $request->mb,
+            'md' => $request->md,
+            'aktif' => $request->has('aktif'),
+        ]);
+
+        return redirect()->route('admin.gejala.index')->with('success', 'Gejala berhasil ditambahkan'); // Perbaikan route
+    }
+
+    /**
+     * Show the form for editing the specified gejala.
+     *
+     * @param int $id
+     * @return View
+     */
+    public function edit(int $id): View
     {
         $gejala = Gejala::findOrFail($id);
-        $gejala->update($request->only(['name', 'weight', 'active']));
-    
-        return redirect()->route('admin.gejala.index')->with('success', 'Gejala berhasil diperbarui');
+        return view('admin.gejala.form', compact('gejala')); // Perbaikan nama view
     }
-    
-    public function destroy($id)
-    {
-        Gejala::destroy($id);
-        return redirect()->route('admin.gejala.index')->with('success', 'Gejala berhasil dihapus');
-    }
-    
 
-    public function aktif()
+    /**
+     * Update the gejala.
+     *
+     * @param Request $request
+     * @param int $id
+     * @return RedirectResponse
+     */
+    public function update(Request $request, int $id): RedirectResponse
     {
-        $gejalaAktif = Gejala::where('active', true)->get(['_id', 'name', 'weight']);
-        return response()->json($gejalaAktif);
+        $validator = Validator::make($request->all(), [
+            'nama' => 'required|string|max:255',
+            'mb' => 'required|numeric|between:0,1',
+            'md' => 'required|numeric|between:0,1',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        $gejala = Gejala::findOrFail($id);
+        $gejala->update([
+            'nama' => $request->nama,
+            'mb' => $request->mb,
+            'md' => $request->md,
+            'aktif' => $request->has('aktif'),
+        ]);
+
+        return redirect()->route('admin.gejala.index')->with('success', 'Gejala diperbarui'); // Perbaikan route
+    }
+
+    /**
+     * Remove the gejala.
+     *
+     * @param int $id
+     * @return RedirectResponse
+     */
+    public function destroy(int $id): RedirectResponse
+    {
+        $gejala = Gejala::findOrFail($id);
+        $gejala->delete();
+        return redirect()->route('admin.gejala.index')->with('success', 'Gejala dihapus'); // Perbaikan route
+    }
+
+    public function toggleStatus(int $id): RedirectResponse
+    {
+        $gejala = Gejala::findOrFail($id);
+        $gejala->aktif = ! $gejala->aktif;
+        $gejala->save();
+        return redirect()->route('admin.gejala.index')->with('success', 'Status diubah'); // Perbaikan route
     }
 }

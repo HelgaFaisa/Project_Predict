@@ -72,14 +72,23 @@ Route::prefix('admin')
         Route::delete('/prediction-history/{predictionHistory}', [PredictionHistoryController::class, 'destroy'])->name('prediction_history.destroy');
 
         // Gejala Routes
-        Route::prefix('gejala')->name('gejala.')->group(function () {
-            Route::get('/', [GejalaController::class, 'index'])->name('index');
-            Route::post('/', [GejalaController::class, 'store'])->name('store');
-            Route::get('/{gejala}/edit', [GejalaController::class, 'edit'])->name('edit');
-            Route::put('/{gejala}', [GejalaController::class, 'update'])->name('update');
-            Route::delete('/{gejala}', [GejalaController::class, 'destroy'])->name('destroy');
-            Route::put('/{gejala}/toggle-status', [GejalaController::class, 'toggleStatus'])->name('toggleStatus');
-        });
+Route::get('/gejala', [GejalaController::class, 'index'])->name('gejala.index');
+Route::get('/gejala/create', [GejalaController::class, 'create'])->name('gejala.create');
+Route::post('/gejala', [GejalaController::class, 'store'])->name('gejala.store');
+Route::get('/gejala/{gejala}/edit', [GejalaController::class, 'edit'])->name('gejala.edit');
+Route::put('/gejala/{gejala}', [GejalaController::class, 'update'])->name('gejala.update');
+Route::delete('/gejala/{gejala}', [GejalaController::class, 'destroy'])->name('gejala.destroy');
+Route::patch('/gejala/{gejala}/toggle-status', [GejalaController::class, 'toggleStatus'])->name('gejala.toggleStatus');
+
+        
+        // Route::prefix('gejala')->name('gejala.')->group(function () {
+        //     Route::get('/', [GejalaController::class, 'index'])->name('index');
+        //     Route::post('/', [GejalaController::class, 'store'])->name('store');
+        //     Route::get('/{gejala}/edit', [GejalaController::class, 'edit'])->name('edit');
+        //     Route::put('/{gejala}', [GejalaController::class, 'update'])->name('update');
+        //     Route::delete('/{gejala}', [GejalaController::class, 'destroy'])->name('destroy');
+        //     Route::put('/{gejala}/toggle-status', [GejalaController::class, 'toggleStatus'])->name('toggleStatus');
+        // });
 // Authentication Routes
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
