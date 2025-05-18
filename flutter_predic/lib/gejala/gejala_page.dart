@@ -39,6 +39,7 @@ class _GejalaPageState extends State<GejalaPage> {
 
   double _totalNilaiGejala = 0;
   String _saran = '';
+  String _hasilPerhitungan = ''; // State untuk menampilkan hasil perhitungan
 
   @override
   void initState() {
@@ -104,19 +105,20 @@ class _GejalaPageState extends State<GejalaPage> {
         _totalNilaiGejala += item.gejala.mb; // Contoh: Menjumlahkan nilai MB
       }
     }
-    print('Total Nilai Gejala: $_totalNilaiGejala');
+    _hasilPerhitungan = 'Total Nilai Gejala: ${_totalNilaiGejala.toStringAsFixed(2)}';
+    print(_hasilPerhitungan);
     _berikanSaran();
   }
 
   void _berikanSaran() {
-    if (_totalNilaiGejala > 0.8) {
+    if (_totalNilaiGejala > 0.7) {
       _saran = 'Nilai gejala tinggi. Disarankan untuk segera periksa ke dokter.';
-    } else if (_totalNilaiGejala > 0.5) {
+    } else if (_totalNilaiGejala > 0.4) {
       _saran = 'Nilai gejala sedang. Pertimbangkan untuk konsultasi dengan dokter.';
     } else {
       _saran = 'Nilai gejala rendah. Tetap pantau kesehatan Anda.';
     }
-    setState(() {}); // Memanggil setState untuk memperbarui tampilan saran
+    setState(() {}); // Memanggil setState untuk memperbarui tampilan saran dan hasil perhitungan
   }
 
   @override
@@ -132,7 +134,7 @@ class _GejalaPageState extends State<GejalaPage> {
           ),
         ],
       ),
-      body: SafeArea( // Bungkus konten utama dengan SafeArea
+      body: SafeArea(
         child: Column(
           children: [
             Expanded(child: _buildGejalaList()),
@@ -143,7 +145,16 @@ class _GejalaPageState extends State<GejalaPage> {
                 child: const Text('Periksa Gejala'),
               ),
             ),
-            if (_saran.isNotEmpty)
+            if (_hasilPerhitungan.isNotEmpty) // Tampilkan hasil perhitungan
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Text(
+                  _hasilPerhitungan,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            if (_saran.isNotEmpty) // Tampilkan saran
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Container(
@@ -164,22 +175,6 @@ class _GejalaPageState extends State<GejalaPage> {
           ],
         ),
       ),
-      // bottomNavigationBar: BottomNavigationBar( // Contoh BottomNavigationBar
-      //   items: const <BottomNavigationBarItem>[
-      //     BottomNavigationBarItem(
-      //       icon: Icon(Icons.home),
-      //       label: 'Beranda',
-      //     ),
-      //     BottomNavigationBarItem(
-      //       icon: Icon(Icons.assignment),
-      //       label: 'Riwayat',
-      //     ),
-      //     BottomNavigationBarItem(
-      //       icon: Icon(Icons.settings),
-      //       label: 'Pengaturan',
-      //     ),
-      //   ],
-      // ),
     );
   }
 
