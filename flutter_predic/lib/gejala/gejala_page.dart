@@ -7,11 +7,13 @@ import '../model/gejala.dart';
 import '../api/gejala_api.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
-class GejalaCeklis {
-  final Gejala gejala;
-  bool isChecked;
+enum JawabanGejala { ya, tidak, belum }
 
-  GejalaCeklis({required this.gejala, this.isChecked = false});
+class GejalaJawaban {
+  final Gejala gejala;
+  JawabanGejala jawaban;
+
+  GejalaJawaban({required this.gejala, this.jawaban = JawabanGejala.belum});
 }
 
 class GejalaPage extends StatefulWidget {
@@ -23,7 +25,7 @@ class GejalaPage extends StatefulWidget {
 
 class _GejalaPageState extends State<GejalaPage> {
   final GejalaApi _gejalaApi = GejalaApi();
-  List<GejalaCeklis> _gejalaCeklisList = []; // Menggunakan model GejalaCeklis
+  List<GejalaJawaban> _gejalaJawabanList = []; // Menggunakan model GejalaJawaban
   bool _isLoading = true;
   String _errorMessage = '';
 
@@ -70,7 +72,7 @@ class _GejalaPageState extends State<GejalaPage> {
     try {
       final gejalaList = await _gejalaApi.getAllGejala();
       setState(() {
-        _gejalaCeklisList = gejalaList.map((gejala) => GejalaCeklis(gejala: gejala)).toList();
+        _gejalaJawabanList = gejalaList.map((gejala) => GejalaJawaban(gejala: gejala)).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -86,7 +88,7 @@ class _GejalaPageState extends State<GejalaPage> {
     try {
       final gejalaList = await _gejalaApi.refreshGejala();
       setState(() {
-        _gejalaCeklisList = gejalaList.map((gejala) => GejalaCeklis(gejala: gejala)).toList();
+        _gejalaJawabanList = gejalaList.map((gejala) => GejalaJawaban(gejala: gejala)).toList();
         _errorMessage = '';
       });
       _refreshController.refreshCompleted();
@@ -100,9 +102,9 @@ class _GejalaPageState extends State<GejalaPage> {
 
   void _hitungNilaiGejala() {
     _totalNilaiGejala = 0;
-    for (var item in _gejalaCeklisList) {
-      if (item.isChecked) {
-        _totalNilaiGejala += item.gejala.mb; // Contoh: Menjumlahkan nilai MB
+    for (var item in _gejalaJawabanList) {
+      if (item.jawaban == JawabanGejala.ya) {
+        _totalNilaiGejala += item.gejala.mb; // Hanya tambahkan MB jika jawaban "Ya"
       }
     }
     _hasilPerhitungan = 'Total Nilai Gejala: ${_totalNilaiGejala.toStringAsFixed(2)}';
@@ -203,7 +205,7 @@ class _GejalaPageState extends State<GejalaPage> {
       );
     }
 
-    if (_gejalaCeklisList.isEmpty) {
+    if (_gejalaJawabanList.isEmpty) {
       return const Center(
         child: Text('Tidak ada data gejala yang tersedia'),
       );
@@ -214,42 +216,57 @@ class _GejalaPageState extends State<GejalaPage> {
       onRefresh: _refreshData,
       child: ListView.builder(
         controller: _scrollController,
-        itemCount: _gejalaCeklisList.length,
+        itemCount: _gejalaJawabanList.length,
         itemBuilder: (context, index) {
-          final gejalaCeklis = _gejalaCeklisList[index];
-          return _buildGejalaRow(gejalaCeklis);
+          final gejalaJawaban = _gejalaJawabanList[index];
+          return _buildGejalaRow(gejalaJawaban);
         },
       ),
     );
   }
 
-  Widget _buildGejalaRow(GejalaCeklis gejalaCeklis) {
+  Widget _buildGejalaRow(GejalaJawaban gejalaJawaban) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          Checkbox(
-            value: gejalaCeklis.isChecked,
-            onChanged: (bool? value) {
-              setState(() {
-                gejalaCeklis.isChecked = value!;
-              });
-            },
-          ),
-          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  gejalaCeklis.gejala.nama,
+                  gejalaJawaban.gejala.nama,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                Text('MB: ${gejalaCeklis.gejala.mb.toStringAsFixed(2)}, MD: ${gejalaCeklis.gejala.md.toStringAsFixed(2)}',
+                Text('MB: ${gejalaJawaban.gejala.mb.toStringAsFixed(2)}, MD: ${gejalaJawaban.gejala.md.toStringAsFixed(2)}',
                   style: const TextStyle(fontSize: 12),
                 ),
               ],
             ),
+          ),
+          Row(
+            children: [
+              Radio<JawabanGejala>(
+                value: JawabanGejala.ya,
+                groupValue: gejalaJawaban.jawaban,
+                onChanged: (JawabanGejala? value) {
+                  setState(() {
+                    gejalaJawaban.jawaban = value!;
+                  });
+                },
+              ),
+              const Text('Ya'),
+              Radio<JawabanGejala>(
+                value: JawabanGejala.tidak,
+                groupValue: gejalaJawaban.jawaban,
+                onChanged: (JawabanGejala? value) {
+                  setState(() {
+                    gejalaJawaban.jawaban = value!;
+                  });
+                },
+              ),
+              const Text('Tidak'),
+            ],
           ),
         ],
       ),
