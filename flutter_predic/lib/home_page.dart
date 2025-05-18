@@ -10,7 +10,7 @@ import 'api/login_api.dart';
 import '../edukasi/edukasi.dart';
 import '../edukasi/ArtikelDetailPage.dart';
 import '../api/edukasi_api.dart';
-
+import '../api/gejala_api.dart';
 
 
 void main() {
@@ -62,7 +62,7 @@ class _HomePageState extends State<HomePage> {
     RiwayatPage(), // Ganti 1 dengan fungsi untuk mendapatkan ID pengguna saat ini
     EdukasiPage(),
     const TargetHidupSehatPage(),
-    DiagnosisPage(),
+    GejalaPage(),
   ];
 
 

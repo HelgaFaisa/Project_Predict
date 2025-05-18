@@ -1,8 +1,9 @@
 <?php
+// api.php - Update your API routes
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\GejalaController;
+use App\Http\Controllers\Api\GejalaApiController;
 use App\Http\Controllers\Api\PemeriksaanController;
 use App\Http\Controllers\Api\EdukasiApiController;
 use App\Http\Controllers\Api\PatientAuthController;
@@ -26,7 +27,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::get('/gejala', [GejalaController::class, 'index']);
+// Replace the GejalaController with GejalaApiController for API endpoints
+Route::get('/gejala', [GejalaApiController::class, 'index']);
+
+// Keep the rest of your routes
 Route::post('/gejala', [GejalaController::class, 'store']);
 Route::put('/gejala/{id}', [GejalaController::class, 'update']);
 Route::delete('/gejala/{id}', [GejalaController::class, 'destroy']);
