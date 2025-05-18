@@ -1,4 +1,4 @@
-// File: gejala.dart
+// File: gejala.dart (atau gejala_page.dart)
 // Widget untuk menampilkan dan berinteraksi dengan data Gejala
 
 import 'package:flutter/material.dart';
@@ -132,36 +132,54 @@ class _GejalaPageState extends State<GejalaPage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(child: _buildGejalaList()),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: _hitungNilaiGejala,
-              child: const Text('Periksa Gejala'),
-            ),
-          ),
-          if (_saran.isNotEmpty)
+      body: SafeArea( // Bungkus konten utama dengan SafeArea
+        child: Column(
+          children: [
+            Expanded(child: _buildGejalaList()),
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12.0),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade100,
-                  borderRadius: BorderRadius.circular(8.0),
-                  border: Border.all(color: Colors.orange.shade400),
-                ),
-                child: Text(
-                  'Saran: $_saran',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
+              child: ElevatedButton(
+                onPressed: _hitungNilaiGejala,
+                child: const Text('Periksa Gejala'),
               ),
             ),
-        ],
+            if (_saran.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12.0),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(8.0),
+                    border: Border.all(color: Colors.orange.shade400),
+                  ),
+                  child: Text(
+                    'Saran: $_saran',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
+      // bottomNavigationBar: BottomNavigationBar( // Contoh BottomNavigationBar
+      //   items: const <BottomNavigationBarItem>[
+      //     BottomNavigationBarItem(
+      //       icon: Icon(Icons.home),
+      //       label: 'Beranda',
+      //     ),
+      //     BottomNavigationBarItem(
+      //       icon: Icon(Icons.assignment),
+      //       label: 'Riwayat',
+      //     ),
+      //     BottomNavigationBarItem(
+      //       icon: Icon(Icons.settings),
+      //       label: 'Pengaturan',
+      //     ),
+      //   ],
+      // ),
     );
   }
 
