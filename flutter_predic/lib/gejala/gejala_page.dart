@@ -5,6 +5,14 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../model/gejala.dart';
 import '../api/gejala_api.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
+
+class GejalaCeklis {
+  final Gejala gejala;
+  bool isChecked;
+
+  GejalaCeklis({required this.gejala, this.isChecked = false});
+}
 
 class GejalaPage extends StatefulWidget {
   const GejalaPage({Key? key}) : super(key: key);
@@ -15,28 +23,30 @@ class GejalaPage extends StatefulWidget {
 
 class _GejalaPageState extends State<GejalaPage> {
   final GejalaApi _gejalaApi = GejalaApi();
-  List<Gejala> _gejalaList = [];
+  List<GejalaCeklis> _gejalaCeklisList = []; // Menggunakan model GejalaCeklis
   bool _isLoading = true;
   String _errorMessage = '';
-  
+
   // Untuk pull-to-refresh
   final ScrollController _scrollController = ScrollController();
   final RefreshController _refreshController = RefreshController(initialRefresh: false);
-  
+
   // Timer untuk update otomatis
   Timer? _autoRefreshTimer;
-  
+
   // Auto update interval dalam menit
   final int _autoUpdateInterval = 5;
+
+  double _totalNilaiGejala = 0;
+  String _saran = '';
 
   @override
   void initState() {
     super.initState();
     _loadData();
-    
     // Mengatur pembaruan otomatis setiap beberapa menit
     _autoRefreshTimer = Timer.periodic(
-      Duration(minutes: _autoUpdateInterval), 
+      Duration(minutes: _autoUpdateInterval),
       (_) => _refreshData()
     );
   }
@@ -58,9 +68,8 @@ class _GejalaPageState extends State<GejalaPage> {
 
     try {
       final gejalaList = await _gejalaApi.getAllGejala();
-      
       setState(() {
-        _gejalaList = gejalaList;
+        _gejalaCeklisList = gejalaList.map((gejala) => GejalaCeklis(gejala: gejala)).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -75,9 +84,8 @@ class _GejalaPageState extends State<GejalaPage> {
   Future<void> _refreshData() async {
     try {
       final gejalaList = await _gejalaApi.refreshGejala();
-      
       setState(() {
-        _gejalaList = gejalaList;
+        _gejalaCeklisList = gejalaList.map((gejala) => GejalaCeklis(gejala: gejala)).toList();
         _errorMessage = '';
       });
       _refreshController.refreshCompleted();
@@ -89,11 +97,33 @@ class _GejalaPageState extends State<GejalaPage> {
     }
   }
 
+  void _hitungNilaiGejala() {
+    _totalNilaiGejala = 0;
+    for (var item in _gejalaCeklisList) {
+      if (item.isChecked) {
+        _totalNilaiGejala += item.gejala.mb; // Contoh: Menjumlahkan nilai MB
+      }
+    }
+    print('Total Nilai Gejala: $_totalNilaiGejala');
+    _berikanSaran();
+  }
+
+  void _berikanSaran() {
+    if (_totalNilaiGejala > 0.8) {
+      _saran = 'Nilai gejala tinggi. Disarankan untuk segera periksa ke dokter.';
+    } else if (_totalNilaiGejala > 0.5) {
+      _saran = 'Nilai gejala sedang. Pertimbangkan untuk konsultasi dengan dokter.';
+    } else {
+      _saran = 'Nilai gejala rendah. Tetap pantau kesehatan Anda.';
+    }
+    setState(() {}); // Memanggil setState untuk memperbarui tampilan saran
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Daftar Gejala'),
+        title: const Text('Pemeriksaan Gejala'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -102,11 +132,40 @@ class _GejalaPageState extends State<GejalaPage> {
           ),
         ],
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          Expanded(child: _buildGejalaList()),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+              onPressed: _hitungNilaiGejala,
+              child: const Text('Periksa Gejala'),
+            ),
+          ),
+          if (_saran.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12.0),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(8.0),
+                  border: Border.all(color: Colors.orange.shade400),
+                ),
+                child: Text(
+                  'Saran: $_saran',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildGejalaList() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -131,188 +190,56 @@ class _GejalaPageState extends State<GejalaPage> {
       );
     }
 
-    if (_gejalaList.isEmpty) {
+    if (_gejalaCeklisList.isEmpty) {
       return const Center(
         child: Text('Tidak ada data gejala yang tersedia'),
       );
     }
 
-    // SmartRefresher untuk pull-to-refresh
     return SmartRefresher(
       controller: _refreshController,
       onRefresh: _refreshData,
       child: ListView.builder(
         controller: _scrollController,
-        itemCount: _gejalaList.length,
+        itemCount: _gejalaCeklisList.length,
         itemBuilder: (context, index) {
-          final gejala = _gejalaList[index];
-          return _buildGejalaCard(gejala);
+          final gejalaCeklis = _gejalaCeklisList[index];
+          return _buildGejalaRow(gejalaCeklis);
         },
       ),
     );
   }
 
-  Widget _buildGejalaCard(Gejala gejala) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: ListTile(
-        leading: CircleAvatar(
-          child: Text(gejala.kode),
-          backgroundColor: gejala.aktif ? Colors.green.shade100 : Colors.grey.shade300,
-        ),
-        title: Text(
-          gejala.nama,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: gejala.aktif ? Colors.black : Colors.grey,
+  Widget _buildGejalaRow(GejalaCeklis gejalaCeklis) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Checkbox(
+            value: gejalaCeklis.isChecked,
+            onChanged: (bool? value) {
+              setState(() {
+                gejalaCeklis.isChecked = value!;
+              });
+            },
           ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Row(
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildFactorChip('MB', gejala.mb),
-                const SizedBox(width: 8),
-                _buildFactorChip('MD', gejala.md),
+                Text(
+                  gejalaCeklis.gejala.nama,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text('MB: ${gejalaCeklis.gejala.mb.toStringAsFixed(2)}, MD: ${gejalaCeklis.gejala.md.toStringAsFixed(2)}',
+                  style: const TextStyle(fontSize: 12),
+                ),
               ],
             ),
-          ],
-        ),
-        trailing: gejala.aktif
-            ? const Icon(Icons.check_circle, color: Colors.green)
-            : const Icon(Icons.cancel, color: Colors.grey),
-        onTap: () => _showGejalaDetails(gejala),
-      ),
-    );
-  }
-
-  Widget _buildFactorChip(String label, double value) {
-    return Chip(
-      label: Text(
-        '$label: ${value.toStringAsFixed(2)}',
-        style: const TextStyle(fontSize: 12),
-      ),
-      backgroundColor: Colors.blue.shade50,
-      padding: const EdgeInsets.all(0),
-      labelPadding: const EdgeInsets.symmetric(horizontal: 8),
-    );
-  }
-
-  void _showGejalaDetails(Gejala gejala) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => _buildDetailSheet(gejala),
-    );
-  }
-
-  Widget _buildDetailSheet(Gejala gejala) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(30),
-              ),
-              margin: const EdgeInsets.only(bottom: 16),
-            ),
-          ),
-          Text(
-            'Detail Gejala: ${gejala.kode}',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const Divider(),
-          _buildDetailItem('Nama', gejala.nama),
-          _buildDetailItem('Measure of Belief (MB)', gejala.mb.toString()),
-          _buildDetailItem('Measure of Disbelief (MD)', gejala.md.toString()),
-          _buildDetailItem('Status', gejala.aktif ? 'Aktif' : 'Tidak Aktif'),
-          const SizedBox(height: 16),
-          Text(
-            'Informasi Tambahan',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'MB dan MD adalah nilai yang digunakan dalam metode certainty factor untuk kalkulasi probabilitas diagnosis. Semakin tinggi nilai MB, semakin kuat keyakinan bahwa gejala ini mengindikasikan suatu kondisi. Semakin tinggi nilai MD, semakin kuat keyakinan bahwa gejala ini tidak mengindikasikan suatu kondisi.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              '$label:',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(value),
           ),
         ],
       ),
-    );
-  }
-}
-
-// Dibutuhkan untuk SmartRefresher
-class RefreshController {
-  final bool initialRefresh;
-  
-  RefreshController({required this.initialRefresh});
-  
-  void refreshCompleted() {}
-  
-  void refreshFailed() {}
-  
-  void dispose() {}
-}
-
-// Widget SmartRefresher sederhana untuk pull-to-refresh
-class SmartRefresher extends StatelessWidget {
-  final RefreshController controller;
-  final Widget child;
-  final Function onRefresh;
-
-  const SmartRefresher({
-    Key? key,
-    required this.controller,
-    required this.child,
-    required this.onRefresh,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: () async {
-        await onRefresh();
-      },
-      child: child,
     );
   }
 }
