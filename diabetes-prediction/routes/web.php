@@ -101,6 +101,20 @@ Route::prefix('admin')
         //     Route::delete('/{gejala}', [GejalaController::class, 'destroy'])->name('destroy');
         //     Route::put('/{gejala}/toggle-status', [GejalaController::class, 'toggleStatus'])->name('toggleStatus');
         // });
+        // Di dalam grup admin
+        // Di dalam grup admin Anda
+          // Route untuk menampilkan profil
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+
+    // Route untuk menampilkan form edit profil <--- INI YANG PERLU ANDA TAMBAHKAN/PASTIKAN ADA
+    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
+
+    // Route untuk memproses update informasi profil
+    Route::put('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
+
+    // Route untuk memproses update password
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
+
 });
 
 // require __DIR__.'/auth.php'; // Jika Anda menggunakan file auth.php terpisah dari Breeze/Jetstream
