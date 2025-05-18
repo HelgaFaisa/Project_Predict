@@ -9,6 +9,9 @@ import 'api/login_api.dart';
 import '../edukasi/edukasi.dart';
 import '../edukasi/ArtikelDetailPage.dart';
 import '../api/edukasi_api.dart';
+import '../api/gejala_api.dart';
+import '../gejala/gejala_page.dart';
+import '../model/gejala.dart';
 void main() {
   runApp(MyApp());
 }
@@ -31,6 +34,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => HomePage(),
         '/riwayat': (context) => RiwayatPage(),
         '/edukasi': (context) => EdukasiPage(),
+        '/gejala': (context) => GejalaPage(),
       },
     );
   }
