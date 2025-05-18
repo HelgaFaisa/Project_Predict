@@ -6,16 +6,22 @@
     <div class="container">
         {{-- Notifikasi --}}
         @if (session('success'))
-            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6" role="alert">
+            <div id="alert-success" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6" role="alert">
                 <strong class="font-bold">Sukses!</strong>
                 <span class="block sm:inline">{{ session('success') }}</span>
+                <button type="button" class="absolute top-0 bottom-0 right-0 px-4 py-3" onclick="closeAlert('alert-success')">
+                    <svg class="fill-current h-6 w-6 text-green-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/></svg>
+                </button>
             </div>
         @endif
 
         @if (session('error'))
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+            <div id="alert-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
                 <strong class="font-bold">Error!</strong>
                 <span class="block sm:inline">{{ session('error') }}</span>
+                <button type="button" class="absolute top-0 bottom-0 right-0 px-4 py-3" onclick="closeAlert('alert-error')">
+                    <svg class="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/></svg>
+                </button>
             </div>
         @endif
 
@@ -33,12 +39,7 @@
             </div>
         </div>
 
-        <!-- {{-- Daftar Gejala --}}
         <div class="bg-white rounded-xl shadow overflow-hidden border border-gray-200">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h2 class="text-xl font-semibold text-gray-800">Daftar Gejala Tersimpan</h2>
-            </div> -->
-
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -80,12 +81,12 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-                                    <a href="{{ route('admin.gejala.edit', $g->_id) }}" title="Edit"
+                                    <a href="{{ route('admin.gejala.edit', $g->id) }}" title="Edit"
                                         class="inline-flex items-center justify-center w-8 h-8 text-indigo-600 hover:text-indigo-900 hover:bg-indigo-100 rounded-full transition">
                                         <i class="ri-pencil-line text-lg"></i>
                                     </a>
 
-                                    <form action="{{ route('admin.gejala.toggleStatus', $g->_id) }}" method="POST"  
+                                    <form action="{{ route('admin.gejala.toggleStatus', $g->id) }}" method="POST"  
                                         class="inline-block"
                                         onsubmit="return confirm('Apakah Anda yakin ingin {{ $g->aktif ? 'menonaktifkan' : 'mengaktifkan' }} gejala ini?');">
                                         @csrf
@@ -96,7 +97,7 @@
                                         </button>
                                     </form>
 
-                                    <form action="{{ route('admin.gejala.destroy', $g->_id) }}" method="POST"  
+                                    <form action="{{ route('admin.gejala.destroy', $g->id) }}" method="POST"  
                                         class="inline-block"
                                         onsubmit="return confirm('PERHATIAN: Menghapus gejala ini mungkin mempengaruhi data diagnosis yang ada. Apakah Anda yakin ingin melanjutkan?');">
                                         @csrf
@@ -131,6 +132,35 @@
 
 @push('scripts')
     <script>
-        // Script tambahan jika diperlukan
+        // Auto-hide alerts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto hide alerts after 5 seconds
+            setTimeout(function() {
+                const successAlert = document.getElementById('alert-success');
+                const errorAlert = document.getElementById('alert-error');
+                
+                if (successAlert) {
+                    successAlert.style.opacity = '0';
+                    successAlert.style.transition = 'opacity 1s';
+                    setTimeout(() => successAlert.style.display = 'none', 1000);
+                }
+                
+                if (errorAlert) {
+                    errorAlert.style.opacity = '0';
+                    errorAlert.style.transition = 'opacity 1s';
+                    setTimeout(() => errorAlert.style.display = 'none', 1000);
+                }
+            }, 5000);
+        });
+
+        // Function to close alerts manually
+        function closeAlert(alertId) {
+            const alert = document.getElementById(alertId);
+            if (alert) {
+                alert.style.opacity = '0';
+                alert.style.transition = 'opacity 0.5s';
+                setTimeout(() => alert.style.display = 'none', 500);
+            }
+        }
     </script>
 @endpush
