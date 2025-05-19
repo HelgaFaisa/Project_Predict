@@ -100,29 +100,47 @@ class _GejalaPageState extends State<GejalaPage> {
     }
   }
 
+  // =======================
+  // PERBAIKAN PERHITUNGAN CF
+  // =======================
   void _hitungNilaiGejala() {
-    _totalNilaiGejala = 0;
+    double cfGlobal = 0;
+
     for (var item in _gejalaJawabanList) {
+      double cf;
+
       if (item.jawaban == JawabanGejala.ya) {
-        _totalNilaiGejala += item.gejala.mb; // Hanya tambahkan MB jika jawaban "Ya"
+        cf = item.gejala.mb - item.gejala.md;      // CF jika jawab "Ya"
+      } else if (item.jawaban == JawabanGejala.tidak) {
+        cf = -item.gejala.md;                      // CF negatif jika jawab "Tidak"
+      } else {
+        cf = 0;                                    // Belum dijawab
       }
+
+      // Penggabungan CF
+      cfGlobal = cfGlobal + cf * (1 - cfGlobal);
     }
-    _hasilPerhitungan = 'Total Nilai Gejala: ${_totalNilaiGejala.toStringAsFixed(2)}';
-    print(_hasilPerhitungan);
-    _berikanSaran();
+
+    _totalNilaiGejala = cfGlobal.clamp(-1, 1);     // Pastikan tetap di rentang -1..1
+    _hasilPerhitungan =
+        'Certainty Factor total: ${_totalNilaiGejala.toStringAsFixed(2)}';
+
+    _berikanSaran();                               
   }
 
   void _berikanSaran() {
-    if (_totalNilaiGejala > 0.7) {
-      _saran = 'Nilai gejala tinggi. Disarankan untuk segera periksa ke dokter.';
-    } else if (_totalNilaiGejala > 0.4) {
-      _saran = 'Nilai gejala sedang. Pertimbangkan untuk konsultasi dengan dokter.';
+    if (_totalNilaiGejala >= 0.6) {
+      _saran = 'Risiko tinggi – segera periksa dokter.';
+    } else if (_totalNilaiGejala >= 0.3) {
+      _saran = 'Risiko sedang – pertimbangkan konsultasi.';
     } else {
-      _saran = 'Nilai gejala rendah. Tetap pantau kesehatan Anda.';
+      _saran = 'Risiko rendah – tetap pantau kesehatan.';
     }
-    setState(() {}); // Memanggil setState untuk memperbarui tampilan saran dan hasil perhitungan
+    setState(() {}); // Memanggil setState untuk memperbarui tampilan
   }
-
+  // =======================
+  // END PERHITUNGAN
+  // =======================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
