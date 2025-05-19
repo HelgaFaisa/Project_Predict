@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../api/login_api.dart';
-import '../home_page.dart'; // Sesuaikan path import ke home_page.dart
+import '../home_page.dart'; // Pastikan path ini sesuai dengan struktur foldermu
 
 class LoginPage extends StatefulWidget {
   @override
@@ -14,9 +14,20 @@ class _LoginPageState extends State<LoginPage> {
   String _errorMessage = '';
 
   Future<void> loginUser() async {
-    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
       setState(() {
-        _errorMessage = 'Email dan password harus diisi';
+        _errorMessage = 'Email dan password harus diisi.';
+      });
+      return;
+    }
+
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+    if (!emailRegex.hasMatch(email)) {
+      setState(() {
+        _errorMessage = 'Format email tidak valid.';
       });
       return;
     }
@@ -27,42 +38,62 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final response = await LoginApi.login(emailController.text, passwordController.text);
+      final response = await LoginApi.login(email, password);
 
       final token = response['token']?.toString();
-      final user = response['user'];
-      final patientId = await LoginApi.getPatientId();
-
-      print('Token setelah login: $token');
-      print('Data user setelah login: $user');
-      print('Patient ID setelah login (dari LoginApi.getPatientId()): $patientId');
+      // Asumsi data user memiliki field 'name' atau 'username'
+      final userData = response['user'];
+      // --- AMBIL NAMA PENGGUNA DARI RESPONS API ---
+      // Gunakan null-aware access (?.) dan default value ('Pengguna') jika field 'name' null
+      final String userName = userData?['name']?.toString() ?? 'Pengguna';
+      // -------------------------------------------
+      final patientId = await LoginApi.getPatientId(); // Pastikan LoginApi.getPatientId() ada dan berfungsi
 
       if (token == null || token.isEmpty) {
-        throw Exception('Token tidak ditemukan dalam respons');
+        throw Exception('Token tidak ditemukan dalam respons.');
       }
-      if (user == null) {
-        throw Exception('Data user tidak ditemukan dalam respons');
+      if (userData == null) {
+         // Ini mungkin tidak selalu error, tergantung API, tapi penting untuk mendapatkan nama
+         print('Warning: Data user tidak ditemukan dalam respons, menggunakan nama default.');
       }
       if (patientId == null || patientId.isEmpty) {
-        throw Exception('ID pasien tidak ditemukan atau tidak tersimpan');
+        // Anda mungkin ingin menangani ini sebagai peringatan atau error, tergantung kebutuhan
+        print('Warning: ID pasien tidak ditemukan atau tidak tersimpan.');
+        // throw Exception('ID pasien tidak ditemukan atau tidak tersimpan.'); // Uncomment jika wajib
       }
 
+      if (!mounted) return; // Cegah setState jika widget sudah tidak aktif
+
+      // --- NAVIGASI KE HOMEPAGE SAMBIL MELEWATKAN userName ---
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => HomePage(), // Asumsi Anda punya HomePage
+          // Lewatkan userName ke HomePage
+          builder: (context) => HomePage(userName: userName),
         ),
       );
+      // ----------------------------------------------------
+
     } catch (e) {
       setState(() {
-        _errorMessage = 'Login gagal: $e';
+        // Bersihkan pesan error dari 'Exception: ' jika ada
+        _errorMessage = 'Login gagal: ${e.toString().replaceAll('Exception: ', '')}';
       });
-      print('Login gagal: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    // Bersihkan controller saat widget dibuang
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -74,32 +105,20 @@ class _LoginPageState extends State<LoginPage> {
           child: Center(
             child: SingleChildScrollView(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ... (Widget UI LoginPage Anda) ...
-                  const Icon(
-                    Icons.health_and_safety,
-                    size: 80,
-                    color: Colors.blue,
-                  ),
+                  const Icon(Icons.health_and_safety, size: 80, color: Colors.blue),
                   const SizedBox(height: 20),
                   const Text(
                     'Selamat Datang',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 10),
                   const Text(
                     'Silakan masuk untuk melanjutkan',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                   const SizedBox(height: 40),
                   TextField(
@@ -109,9 +128,7 @@ class _LoginPageState extends State<LoginPage> {
                       labelText: 'Email',
                       hintText: 'Masukkan email Anda',
                       prefixIcon: const Icon(Icons.email),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: const BorderSide(color: Colors.blue, width: 2),
@@ -126,9 +143,7 @@ class _LoginPageState extends State<LoginPage> {
                       labelText: 'Password',
                       hintText: 'Masukkan password Anda',
                       prefixIcon: const Icon(Icons.lock),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: const BorderSide(color: Colors.blue, width: 2),
@@ -158,10 +173,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       child: _isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              'Masuk',
-                              style: TextStyle(fontSize: 18),
-                            ),
+                          : const Text('Masuk', style: TextStyle(fontSize: 18)),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -171,14 +183,11 @@ class _LoginPageState extends State<LoginPage> {
                       const Text('Belum punya akun? '),
                       GestureDetector(
                         onTap: () {
-                          // TODO: Implement navigation to registration
+                          // TODO: Navigasi ke halaman pendaftaran
                         },
                         child: const Text(
                           'Daftar',
-                          style: TextStyle(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -190,12 +199,5 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
-    super.dispose();
   }
 }

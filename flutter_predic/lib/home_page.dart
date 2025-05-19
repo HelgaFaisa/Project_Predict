@@ -3,15 +3,15 @@ import 'riwayatpemeriksaan/riwayat.dart';
 import 'edukasi/edukasi.dart';
 import 'target/targethidup.dart';
 import '../gejala/gejala_page.dart';
-import '/model/gejala.dart';
+import '/model/gejala.dart'; 
 import 'logindokter/login.dart';
 import '../api/riwayat_api.dart';
 import 'api/login_api.dart';
-import '../edukasi/edukasi.dart';
+// Removed duplicate import: // import '../edukasi/edukasi.dart'
 import '../edukasi/ArtikelDetailPage.dart';
 import '../api/edukasi_api.dart';
 import '../api/gejala_api.dart';
-
+import '../model/ProfileHeader.dart';
 
 void main() {
   runApp(const MyApp());
@@ -27,11 +27,11 @@ class MyApp extends StatelessWidget {
       title: 'Health App',
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: Colors.blue[50], // Setting default scaffold background
+        scaffoldBackgroundColor: Colors.blue[50],
         visualDensity: VisualDensity.adaptivePlatformDensity,
         fontFamily: 'Poppins',
       ),
-      home: const HomePage(),
+      home: LoginPage(),
       routes: {
         '/profile': (context) => const Center(child: Text('Profile Page')),
       },
@@ -40,9 +40,11 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Home Page
+// Home Page - Sekarang menerima userName
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  final String userName;
+
+  const HomePage({Key? key, required this.userName}) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -57,51 +59,51 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-   final List<Widget> _pages = [
+  // Daftar halaman, sesuaikan jika ada halaman yang butuh data spesifik
+  final List<Widget> _pages = [
     const HealthGraphPage(),
-    RiwayatPage(), // Ganti 1 dengan fungsi untuk mendapatkan ID pengguna saat ini
+    RiwayatPage(),
     EdukasiPage(),
     const TargetHidupSehatPage(),
     GejalaPage(),
   ];
 
-
   @override
- Widget build(BuildContext context) {
-  return Scaffold(
-    // Use a Container with decoration instead of backgroundColor
-    backgroundColor: Colors.transparent, // Make Scaffold transparent
-    body: Container(
-      // Apply the gradient as decoration
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.blue[300]!, Colors.blue[50]!],
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.blue[300]!, Colors.blue[50]!],
+          ),
+        ),
+        child: Column(
+          children: [
+            if (selectedIndex == 0) ProfileHeader(userName: widget.userName),
+            
+            // Fixed AnimatedSwitcher issue - removed duplicate child property
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 400),
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween(
+                      begin: const Offset(0.0, 0.1),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                ),
+                child: _pages[selectedIndex],
+              ),
+            ),
+          ],
         ),
       ),
-      child: Column(
-        children: [
-          if (selectedIndex == 0) const ProfileHeader(),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              transitionBuilder: (child, animation) => FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween(
-                    begin: const Offset(0.0, 0.1),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
-                ),
-              ),
-              child: _pages[selectedIndex],
-            ),
-          ),
-        ],
-      ),
-    ),
       extendBody: true,
       bottomNavigationBar: FloatingNavBar(
         selectedIndex: selectedIndex,
@@ -126,75 +128,7 @@ class _HomePageState extends State<HomePage> {
 }
 
 // Floating Bottom Navigation Bar
-class BottomNavBar extends StatefulWidget {
-  @override
-  _BottomNavBarState createState() => _BottomNavBarState();
-}
-
-class _BottomNavBarState extends State<BottomNavBar> {
-  int _page = 0;
-
-  final List<IconData> _icons = [
-    Icons.add,
-    Icons.list,
-    Icons.contact_mail,
-    Icons.call,
-    Icons.perm_identity,
-  ];
-
-  final List<String> _labels = [
-    'Add',
-    'List',
-    'Mail',
-    'Call',
-    'Profile',
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _page = index;
-      print('Selected page: $_page');
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Custom Floating Nav Bar')),
-      body: Container(
-        color: Colors.blue[50], // Changed to light blue
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              if (_page == 0) Icon(Icons.add, size: 130, color: Colors.blue[700]),
-              if (_page == 1) Icon(Icons.list, size: 130, color: Colors.blue[800]),
-              if (_page == 2) Icon(Icons.contact_mail, size: 130, color: Colors.blue[700]),
-              if (_page == 3) Icon(Icons.call, size: 130, color: Colors.blue[800]),
-              if (_page == 4) Icon(Icons.perm_identity, size: 130, color: Colors.blue[700]),
-              Text(_page.toString(), textScaleFactor: 5),
-              ElevatedButton(
-                child: Text('Go To Page of index 0'),
-                onPressed: () {
-                  setState(() {
-                    _page = 0;
-                  });
-                },
-              )
-            ],
-          ),
-        ),
-      ),
-      extendBody: true,
-      bottomNavigationBar: FloatingNavBar(
-        selectedIndex: _page,
-        onItemTapped: _onItemTapped,
-        icons: _icons,
-        labels: _labels,
-      ),
-    );
-  }
-}
+// Removed redundant BottomNavBar class that isn't used in the main app flow
 
 class FloatingNavBar extends StatelessWidget {
   final int selectedIndex;
@@ -365,83 +299,6 @@ class NavBarPainter extends CustomPainter {
   }
 }
 
-// Profile Header
-class ProfileHeader extends StatelessWidget {
-  const ProfileHeader({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.only(top: 50, left: 24, right: 24, bottom: 30),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.blue.shade700,
-            Colors.blue.shade900,
-          ],
-        ),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(40)),
-        border: Border.all(color: Colors.blue.shade300, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Halo Naufal!',
-                style: TextStyle(
-                  fontSize: 22,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'April, 2025',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.white70,
-                ),
-              ),
-            ],
-          ),
-          GestureDetector(
-            onTap: () => Navigator.pushNamed(context, '/profile'),
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: CircleAvatar(
-                radius: 25,
-                backgroundColor: Colors.white,
-                child: Icon(Icons.person, color: Colors.blue.shade900, size: 30),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // Health Graph Page
 class HealthGraphPage extends StatelessWidget {
   const HealthGraphPage({Key? key}) : super(key: key);
@@ -493,8 +350,8 @@ class _GraphCard extends StatelessWidget {
               Text(
                 'Grafik Parameter Kesehatan',
                 style: TextStyle(
-                  fontSize: 16, 
-                  fontWeight: FontWeight.w600, 
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                   color: Colors.blue.shade800
                 ),
               ),
@@ -582,8 +439,8 @@ class _DescriptionCard extends StatelessWidget {
               const Text(
                 'Keterangan',
                 style: TextStyle(
-                  fontSize: 16, 
-                  fontWeight: FontWeight.bold, 
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                   color: Colors.black87
                 ),
               ),
@@ -593,8 +450,8 @@ class _DescriptionCard extends StatelessWidget {
           Text(
             'Grafik ini menunjukkan tingkat glukosa dan tekanan darah Anda selama periode pengukuran terakhir. Tren menunjukkan fluktuasi yang perlu diperhatikan.',
             style: TextStyle(
-              fontSize: 14, 
-              color: Colors.grey[700], 
+              fontSize: 14,
+              color: Colors.grey[700],
               height: 1.5
             ),
           ),
@@ -629,9 +486,9 @@ class _DescriptionCard extends StatelessWidget {
 
 class _CardContainer extends StatelessWidget {
   final Widget child;
-  
+
   const _CardContainer({
-    required this.child, 
+    required this.child,
     Key? key,
   }) : super(key: key);
 
@@ -691,7 +548,7 @@ class EnhancedLineChartPainter extends CustomPainter {
     for (int i = 0; i <= 5; i++) {
       final y = height * i / 5;
       canvas.drawLine(Offset(0, y), Offset(width, y), gridPaint);
-      
+
       // Draw Y-axis labels
       textPainter.text = TextSpan(
         text: '${100 - (i * 20)}',
@@ -700,11 +557,11 @@ class EnhancedLineChartPainter extends CustomPainter {
       textPainter.layout();
       textPainter.paint(canvas, Offset(-25, y - textPainter.height / 2));
     }
-    
+
     for (int i = 0; i <= 8; i++) {
       final x = width * i / 8;
       canvas.drawLine(Offset(x, 0), Offset(x, height), gridPaint);
-      
+
       // Draw X-axis labels
       final month = _getMonthName(i);
       textPainter.text = TextSpan(
@@ -720,25 +577,25 @@ class EnhancedLineChartPainter extends CustomPainter {
     _drawDataset(canvas, size, Colors.blue.shade400, offset: 0.15);
     _drawDataset(canvas, size, Colors.green.shade400, offset: -0.1);
   }
-  
+
   void _drawDataset(Canvas canvas, Size size, Color color, {double offset = 0}) {
     final width = size.width;
     final height = size.height;
-    
+
     final paint = Paint()
       ..color = color
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-    
+
     final pointPaint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
-      
+
     final shadowPaint = Paint()
       ..color = color.withOpacity(0.15)
       ..style = PaintingStyle.fill;
-      
+
     // Generate slightly different data points for each dataset
     final points = [
       Offset(width * 0 / 8, height * (0.7 + offset)),
@@ -757,7 +614,7 @@ class EnhancedLineChartPainter extends CustomPainter {
     for (int i = 1; i < points.length; i++) {
       final p0 = points[i - 1];
       final p1 = points[i];
-      
+
       // Create smooth curve
       final controlPoint1 = Offset(
         p0.dx + (p1.dx - p0.dx) / 2,
@@ -767,31 +624,31 @@ class EnhancedLineChartPainter extends CustomPainter {
         p0.dx + (p1.dx - p0.dx) / 2,
         p1.dy,
       );
-      
+
       path.cubicTo(
         controlPoint1.dx, controlPoint1.dy,
         controlPoint2.dx, controlPoint2.dy,
         p1.dx, p1.dy,
       );
     }
-    
+
     // Draw shadow
     final shadowPath = Path()..addPath(path, Offset.zero);
     shadowPath.lineTo(width, height);
     shadowPath.lineTo(0, height);
     shadowPath.close();
     canvas.drawPath(shadowPath, shadowPaint);
-    
+
     // Draw line
     canvas.drawPath(path, paint);
-    
+
     // Draw points
     for (var point in points) {
       canvas.drawCircle(point, 4, pointPaint);
       canvas.drawCircle(point, 2, Paint()..color = Colors.white);
     }
   }
-  
+
   String _getMonthName(int index) {
     final months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep'];
     return index < months.length ? months[index] : '';
