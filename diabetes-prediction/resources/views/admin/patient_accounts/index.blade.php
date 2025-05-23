@@ -62,10 +62,14 @@
                         <a href="{{ route('admin.patient-accounts.edit', $account) }}" class="text-indigo-600 hover:text-indigo-800" title="Edit Akun">
                             <i class="ri-pencil-line text-lg"></i>
                         </a>
-                        <form action="{{ route('admin.patient-accounts.destroy', $account) }}" method="POST" class="inline-block" onsubmit="return confirm('Apakah Anda yakin ingin menghapus akun untuk \'{{ $account->name }}\'?');">
+                        {{-- FORM HAPUS AKUN (MODIFIKASI) --}}
+                        <form action="{{ route('admin.patient-accounts.destroy', $account) }}" method="POST" class="inline-block form-hapus-akun">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="text-red-600 hover:text-red-800" title="Hapus Akun">
+                            <button type="button" {{-- Diubah dari type="submit" --}}
+                                    class="text-red-600 hover:text-red-800 tombol-hapus-akun"
+                                    title="Hapus Akun"
+                                    data-account-name="{{ $account->name }}"> {{-- Menyimpan nama akun --}}
                                 <i class="ri-delete-bin-line text-lg"></i>
                             </button>
                         </form>
@@ -85,4 +89,131 @@
         {{ $accounts->appends(request()->query())->links() }}
     </div>
 </div>
+
+{{-- MODAL KONFIRMASI HAPUS (struktur sama seperti sebelumnya) --}}
+<div id="konfirmasiHapusModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center" style="display: none; z-index: 1050;">
+    <div id="modalKonten" class="relative bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-auto" style="position: absolute;">
+        <div class="text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+            </div>
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mt-3" id="modalTitle">Konfirmasi Penghapusan</h3>
+            <div class="mt-2 px-7 py-3">
+                <p class="text-sm text-gray-500" id="modalMessage">Apakah Anda yakin ingin melanjutkan aksi ini?</p> {{-- Akan diisi oleh JS --}}
+            </div>
+            <div class="flex justify-center items-center px-4 py-3 gap-3">
+                <button id="tombolBatalKonfirmasi" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                    Batal
+                </button>
+                <button id="tombolHapusKonfirmasi" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    Ya, Hapus
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+    // Script untuk Modal Konfirmasi Hapus Akun
+    const modal = document.getElementById('konfirmasiHapusModal');
+    const modalKonten = document.getElementById('modalKonten');
+    const modalMessage = document.getElementById('modalMessage');
+    const tombolBatal = document.getElementById('tombolBatalKonfirmasi');
+    const tombolHapus = document.getElementById('tombolHapusKonfirmasi');
+    let formUntukDihapus = null;
+
+    if (modal && modalKonten && modalMessage && tombolBatal && tombolHapus) {
+        document.querySelectorAll('.tombol-hapus-akun').forEach(button => {
+            button.addEventListener('click', function (event) {
+                event.preventDefault(); 
+
+                formUntukDihapus = this.closest('form.form-hapus-akun');
+                const accountName = this.dataset.accountName || 'akun ini'; // Fallback jika nama tidak ada
+                
+                modalMessage.textContent = `Apakah Anda yakin ingin menghapus akun untuk '${accountName}'?`;
+
+                const buttonRect = this.getBoundingClientRect();
+                const scrollY = window.scrollY || window.pageYOffset;
+                const scrollX = window.scrollX || window.pageXOffset;
+
+                // Sesuaikan offset ini agar pas dengan tombol hapus akun
+                let topPos = buttonRect.bottom + scrollY + 10;
+                let leftPos = buttonRect.left + scrollX - (modalKonten.offsetWidth / 2) + (buttonRect.width / 2) - 375; // Contoh offset -150px
+
+                if (leftPos < 10) leftPos = 10;
+                if ((leftPos + modalKonten.offsetWidth) > (window.innerWidth - 10)) {
+                    leftPos = window.innerWidth - modalKonten.offsetWidth - 10;
+                }
+                if ((topPos + modalKonten.offsetHeight) > (window.innerHeight + scrollY - 10) ) {
+                     topPos = buttonRect.top + scrollY - modalKonten.offsetHeight - 10;
+                }
+                if (topPos < (scrollY + 10)) {
+                    topPos = scrollY + 10;
+                }
+
+                modalKonten.style.top = `${topPos}px`;
+                modalKonten.style.left = `${leftPos}px`;
+                modal.style.display = 'flex';
+            });
+        });
+
+        tombolBatal.addEventListener('click', function () {
+            modal.style.display = 'none';
+            formUntukDihapus = null;
+        });
+
+        tombolHapus.addEventListener('click', function () {
+            if (formUntukDihapus) {
+                formUntukDihapus.submit();
+            }
+            modal.style.display = 'none';
+            formUntukDihapus = null;
+        });
+
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+                formUntukDihapus = null;
+            }
+        });
+    } else {
+        console.warn('Elemen modal konfirmasi hapus tidak ditemukan. Pastikan HTML modal ada dan ID-nya benar.');
+    }
+
+    // Script untuk auto-hide alerts (jika diperlukan dan belum ada di layout utama)
+    // Pastikan fungsi closeAlert didefinisikan jika tombol close manual alert digunakan.
+    // Anda bisa menyalinnya dari contoh sebelumnya jika belum ada.
+    // Contoh:
+    // document.addEventListener('DOMContentLoaded', function() {
+    //     setTimeout(function() {
+    //         const successAlert = document.getElementById('alert-success'); // Sesuaikan ID jika perlu
+    //         const errorAlert = document.getElementById('alert-error'); // Sesuaikan ID jika perlu
+            
+    //         if (successAlert) {
+    //             successAlert.style.opacity = '0';
+    //             successAlert.style.transition = 'opacity 1s';
+    //             setTimeout(() => successAlert.style.display = 'none', 1000);
+    //         }
+            
+    //         if (errorAlert) {
+    //             errorAlert.style.opacity = '0';
+    //             errorAlert.style.transition = 'opacity 1s';
+    //             setTimeout(() => errorAlert.style.display = 'none', 1000);
+    //         }
+    //     }, 5000);
+    // });
+
+    // function closeAlert(alertId) {
+    //     const alert = document.getElementById(alertId);
+    //     if (alert) {
+    //         alert.style.opacity = '0';
+    //         alert.style.transition = 'opacity 0.5s';
+    //         setTimeout(() => alert.style.display = 'none', 500);
+    //     }
+    // }
+</script>
+@endpush

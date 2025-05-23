@@ -7,63 +7,96 @@ use App\Models\Patient;
 use App\Models\PredictionHistory;
 use App\Models\EducationArticle;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
+use Carbon\CarbonPeriod; // Ditambahkan untuk iterasi tanggal
+use Illuminate\Http\Request; // Ditambahkan
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB; // Digunakan untuk DB::raw jika diperlukan, namun kita hindari untuk MongoDB
+// use Illuminate\Support\Facades\DB; // Tidak digunakan secara langsung di sini
 use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request) // Ditambahkan Request $request
     {
         // Data Sambutan
         $userName = Auth::check() ? Auth::user()->name : 'Dokter';
 
-        // Statistik Kartu
+        // --- PENGOLAHAN FILTER TANGGAL (HANYA UNTUK GRAFIK TREN PASIEN BARU) ---
+        $inputStartDate = $request->input('start_date');
+        $inputEndDate = $request->input('end_date');
+
+        $filterStartDateForTrend = null;
+        $filterEndDateForTrend = null;
+
+        // Default ke 7 hari terakhir jika tidak ada input tanggal untuk grafik tren
+        if ($inputStartDate && $inputEndDate) {
+            try {
+                $filterStartDateForTrend = Carbon::parse($inputStartDate)->startOfDay();
+                $filterEndDateForTrend = Carbon::parse($inputEndDate)->endOfDay();
+                // Pastikan end_date tidak sebelum start_date
+                if ($filterEndDateForTrend->lt($filterStartDateForTrend)) {
+                    $filterEndDateForTrend = $filterStartDateForTrend->copy()->endOfDay();
+                }
+            } catch (\Exception $e) {
+                Log::error('Invalid date format for dashboard patient trend filter: ' . $e->getMessage());
+                // Fallback ke default jika parsing gagal
+                $filterEndDateForTrend = Carbon::now()->endOfDay();
+                $filterStartDateForTrend = $filterEndDateForTrend->copy()->subDays(6)->startOfDay();
+            }
+        } else {
+            // Default jika tidak ada filter tanggal dari request
+            $filterEndDateForTrend = Carbon::now()->endOfDay();
+            $filterStartDateForTrend = $filterEndDateForTrend->copy()->subDays(6)->startOfDay(); // Default 7 hari terakhir
+        }
+        
+        // Variabel untuk mengisi ulang nilai filter di view
+        $requestedStartDate = $inputStartDate ?? $filterStartDateForTrend->toDateString();
+        $requestedEndDate = $inputEndDate ?? $filterEndDateForTrend->toDateString();
+
+
+        // --- STATISTIK KARTU (SESUAI KODE ASLI ANDA, TIDAK DIFILTER TANGGAL) ---
         $totalActivePatients = Patient::count();
         $newPatientsThisWeek = Patient::where('created_at', '>=', Carbon::now()->startOfWeek())->count();
         $newPredictionsToday = PredictionHistory::where('prediction_timestamp', '>=', Carbon::now()->startOfDay())->count();
-        $highRiskPredictionsCount = PredictionHistory::where('result', '1')->count();
+        $highRiskPredictionsCount = PredictionHistory::where('result', '1')->count(); // Ini adalah total, bukan per periode
         $educationArticleCount = EducationArticle::where('status', 'published')->count();
 
-        // Daftar Pasien Terbaru (Tidak ditampilkan di dashboard ini, tapi logika ada jika diperlukan)
-        // $recentPatientsData = [];
-        // $recentPatients = Patient::latest()->take(5)->get();
-        // foreach ($recentPatients as $patient) {
-        //     $latestPrediction = PredictionHistory::where('patient_id', $patient->_id)
-        //                                         ->latest('prediction_timestamp')
-        //                                         ->first();
-        //     $recentPatientsData[] = [
-        //         'patient' => $patient,
-        //         'latest_prediction_status' => $latestPrediction ? ($latestPrediction->result == 1 ? 'Positif' : 'Negatif') : 'Belum Ada',
-        //         'latest_prediction_date' => $latestPrediction ? $latestPrediction->prediction_timestamp : null,
-        //         'registration_date' => $patient->created_at,
-        //     ];
-        // }
 
-        // Data Grafik Tren Pasien Baru
+        // --- DATA GRAFIK TREN PASIEN BARU (JUMLAH PASIEN BARU PER HARI, DIFILTER) ---
         $patientTrendLabels = [];
         $patientTrendData = [];
-        $numberOfWeeksForTrend = 12;
-        $startDateForTrend = Carbon::now()->subWeeks($numberOfWeeksForTrend - 1)->startOfWeek();
-        $endDateForTrend = Carbon::now()->endOfWeek();
-        $allPatientsInTrendPeriod = Patient::whereBetween('created_at', [$startDateForTrend, $endDateForTrend])
-                                        ->orderBy('created_at', 'asc')
-                                        ->get(['created_at']);
-        $patientsGroupedByWeek = $allPatientsInTrendPeriod->groupBy(function($patientForGroup) {
-            $createdDate = $patientForGroup->created_at instanceof Carbon ? $patientForGroup->created_at : Carbon::parse($patientForGroup->created_at);
-            return $createdDate->format("W-Y"); // Format: "NomorMinggu-Tahun"
-        });
-        for ($i = $numberOfWeeksForTrend - 1; $i >= 0; $i--) {
-            $loopDate = Carbon::now()->subWeeks($i);
-            $weekKey = $loopDate->format("W-Y");
-            $patientTrendLabels[] = $loopDate->startOfWeek()->isoFormat('D MMM') . ' - ' . $loopDate->endOfWeek()->isoFormat('D MMM');
-            $patientTrendData[] = isset($patientsGroupedByWeek[$weekKey]) ? count($patientsGroupedByWeek[$weekKey]) : 0;
+        $dailyPatientCounts = [];
+
+        $periodForTrend = CarbonPeriod::create($filterStartDateForTrend, $filterEndDateForTrend);
+        foreach ($periodForTrend as $date) {
+            $formattedDateLabel = $date->isoFormat('D MMM'); // Label: "17 Mei"
+            $dateKey = $date->toDateString(); // Kunci: "YYYY-MM-DD"
+            $patientTrendLabels[] = $formattedDateLabel;
+            $dailyPatientCounts[$dateKey] = 0;
         }
+        
+        $patientsInFilteredPeriod = Patient::whereBetween('created_at', [$filterStartDateForTrend, $filterEndDateForTrend])
+            ->orderBy('created_at', 'asc')
+            ->get(['created_at'])
+            ->groupBy(function ($patient) {
+                $createdAtDate = $patient->created_at instanceof Carbon ? $patient->created_at : Carbon::parse($patient->created_at);
+                return $createdAtDate->toDateString();
+            });
+
+        foreach ($patientsInFilteredPeriod as $dateKey => $patientsOnDay) {
+            if (array_key_exists($dateKey, $dailyPatientCounts)) {
+                $dailyPatientCounts[$dateKey] = count($patientsOnDay);
+            }
+        }
+        $patientTrendData = array_values($dailyPatientCounts);
+        // Pastikan $patientTrendLabels sudah sesuai dengan urutan $dailyPatientCounts jika ada hari tanpa data
+        // Dengan pre-inisialisasi $dailyPatientCounts berdasarkan $periodForTrend, urutan seharusnya sudah benar.
+
+
+        // --- DATA GRAFIK LAINNYA (SESUAI KODE ASLI ANDA, TIDAK DIFILTER TANGGAL) ---
 
         // Data Grafik Distribusi Hasil Prediksi Diabetes
         $allPredictionsCount = PredictionHistory::count();
-        $positivePredictions = $highRiskPredictionsCount; // Sudah dihitung untuk kartu statistik
+        $positivePredictions = $highRiskPredictionsCount; // Menggunakan total dari kartu statistik
         $negativePredictions = max(0, $allPredictionsCount - $positivePredictions);
         $predictionDistributionLabels = ['Positif (Risiko Tinggi)', 'Negatif (Risiko Rendah)'];
         $predictionDistributionData = [$positivePredictions, $negativePredictions];
@@ -103,7 +136,7 @@ class DashboardController extends Controller
             try {
                 $birthDate = Carbon::parse($patient->date_of_birth);
                 $age = $birthDate->age;
-                if ($age < 0) continue; // Abaikan tanggal lahir tidak valid
+                if ($age < 0) continue;
                 if ($age < 20) $ageGroups['<20']++;
                 elseif ($age <= 29) $ageGroups['20-29']++;
                 elseif ($age <= 39) $ageGroups['30-39']++;
@@ -133,16 +166,15 @@ class DashboardController extends Controller
         $glucoseGroupLabels = array_keys($glucoseGroups);
         $glucoseGroupData = array_values($glucoseGroups);
 
-        return view('admin.dashboard', compact( // Pastikan nama view adalah 'admin.dashboard'
+        return view('admin.dashboard', compact(
             'userName',
             'totalActivePatients',
-            'newPatientsThisWeek',
-            'newPredictionsToday',
-            'highRiskPredictionsCount',
+            'newPatientsThisWeek',       // Tetap menggunakan data asli
+            'newPredictionsToday',      // Tetap menggunakan data asli
+            'highRiskPredictionsCount', // Tetap menggunakan data asli (total)
             'educationArticleCount',
-            // 'recentPatientsData', // Dikomentari karena tidak ada tabel pasien di dashboard saat ini
-            'patientTrendLabels',
-            'patientTrendData',
+            'patientTrendLabels',       // Data sudah difilter
+            'patientTrendData',         // Data sudah difilter
             'predictionDistributionLabels',
             'predictionDistributionData',
             'pregnanciesGroupLabels',
@@ -150,7 +182,9 @@ class DashboardController extends Controller
             'ageGroupLabels',
             'ageGroupData',
             'glucoseGroupLabels',
-            'glucoseGroupData'
+            'glucoseGroupData',
+            'requestedStartDate',       // Untuk mengisi ulang filter di view
+            'requestedEndDate'          // Untuk mengisi ulang filter di view
         ));
     }
 }

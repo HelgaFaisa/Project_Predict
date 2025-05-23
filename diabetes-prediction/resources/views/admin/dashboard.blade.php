@@ -11,12 +11,30 @@
         <p class="mt-1 text-gray-600">Berikut ringkasan aktivitas terbaru Anda per {{ \Carbon\Carbon::now()->translatedFormat('l, d F Y') }}.</p>
     </div>
 
+    {{-- FORM FILTER TANGGAL --}}
+<div class="bg-white rounded-xl shadow mt-6 p-4 md:p-6 border border-gray-200">
+    <form action="{{ route('admin.dashboard') }}" method="GET" class="flex flex-col sm:flex-row sm:items-end gap-4">
+        <div>
+            <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Tanggal Mulai</label>
+            <input type="date" name="start_date" id="start_date" value="{{ $requestedStartDate ?? '' }}"
+                   class="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+        </div>
+        <div>
+            <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">Tanggal Akhir</label>
+            <input type="date" name="end_date" id="end_date" value="{{ $requestedEndDate ?? '' }}"
+                   class="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+        </div>
+        {{-- ... tombol filter ... --}}
+    </form>
+</div>
+    {{-- AKHIR FORM FILTER TANGGAL --}}
+
     {{-- Grid Kartu Statistik --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {{-- Card 1: Pasien Aktif --}}
         <div class="bg-white rounded-xl shadow p-6 hover:shadow-lg transition-shadow duration-300 ease-in-out border border-gray-200">
             <div class="flex items-center justify-between">
-                <span class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Pasien Aktif</span>
+                <span class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Total Pasien </span>
                 <div class="p-2 rounded-full bg-blue-100 text-blue-600">
                     <i class="ri-group-line text-xl"></i>
                 </div>
@@ -56,7 +74,7 @@
         {{-- Card 3: Pasien Risiko Tinggi --}}
         <div class="bg-white rounded-xl shadow p-6 hover:shadow-lg transition-shadow duration-300 ease-in-out border border-gray-200">
             <div class="flex items-center justify-between">
-                <span class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Total Risiko Tinggi</span>
+                <span class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Total Positif</span>
                 <div class="p-2 rounded-full bg-red-100 text-red-600">
                     <i class="ri-alert-line text-xl"></i>
                 </div>
@@ -134,11 +152,6 @@
             </div>
         </div>
     </div>
-    {{-- AKHIR BARIS BARU --}}
-
-    {{-- Daftar Pasien (Ringkasan) - Ini bisa dipindahkan ke bawah jika halaman terlalu panjang --}}
-    {{-- Atau bagian artikel edukasi terbaru bisa diletakkan di sini --}}
-
 </div>
 @endsection
 
@@ -160,7 +173,7 @@
             const glucoseGroupLabels = @json($glucoseGroupLabels ?? []);
             const glucoseGroupData = @json($glucoseGroupData ?? []);
 
-            // Fungsi helper untuk opsi chart umum (bar & line)
+            // Fungsi helper untuk opsi chart umum (bar & line) - Sesuai dengan kode asli Anda
             function getCommonChartOptions(title) {
                 return {
                     responsive: true,
@@ -186,12 +199,12 @@
                             backgroundColor: '#1f2937', titleColor: '#f3f4f6', bodyColor: '#d1d5db',
                             mode: 'index', intersect: false, padding: 10, cornerRadius: 4
                         },
-                        title: { display: false, text: title, font: { size: 16 }, color: '#1f2937' }
+                        title: { display: false, text: title, font: { size: 16 }, color: '#1f2937' } // Sesuai kode asli Anda
                     }
                 };
             }
 
-            // 1. Grafik Tren Pasien Baru (Line Chart - sudah ada)
+            // 1. Grafik Tren Pasien Baru (Line Chart - sudah ada) - Sesuai dengan kode asli Anda
             const patientTrendCtx = document.getElementById('patientTrendChart');
             if (patientTrendCtx && patientTrendLabels.length > 0) {
                 new Chart(patientTrendCtx, {
@@ -205,76 +218,78 @@
                             pointBorderColor: '#fff', pointHoverBackgroundColor: '#fff', pointHoverBorderColor: 'rgb(99, 102, 241)'
                         }]
                     },
-                    options: getCommonChartOptions('Tren Pasien Baru Mingguan')
+                    options: getCommonChartOptions('Tren Pasien Baru Mingguan') // Sesuai kode asli Anda
                 });
             } else if (patientTrendCtx) {
                 patientTrendCtx.parentNode.innerHTML = '<p class="text-center text-gray-500 italic py-10">Data tren pasien belum tersedia.</p>';
             }
 
 
-            // 2. Grafik Distribusi Hasil Prediksi (Pie Chart - sudah ada)
-const predictionDistributionCtx = document.getElementById('predictionDistributionChart');
-if (predictionDistributionCtx) {
-    const hasPredictionData = predictionDistributionData && predictionDistributionData.length > 0;
-    
-    if (hasPredictionData) {
-        new Chart(predictionDistributionCtx, {
-            type: 'pie',
-            data: {
-                labels: predictionDistributionLabels,
-                datasets: [{
-                    label: 'Distribusi Prediksi', 
-                    data: predictionDistributionData,
-                    backgroundColor: ['rgb(239, 68, 68)', 'rgb(34, 197, 94)'],
-                    borderColor: ['rgb(255, 255, 255)','rgb(255, 255, 255)'],
-                    borderWidth: 2, 
-                    hoverOffset: 8
-                }]
-            },
-            options: {
-                responsive: true, 
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { 
-                        position: 'bottom', 
-                        labels: { 
-                            color: '#374151', 
-                            padding: 15,
-                            // Pastikan label tetap ditampilkan bahkan jika datanya nol
-                            filter: function(legendItem, data) {
-                                return true; // Tampilkan semua label tanpa filter
-                            }
-                        } 
-                    },
-                    tooltip: {
-                        backgroundColor: '#1f2937', 
-                        titleColor: '#f3f4f6', 
-                        bodyColor: '#d1d5db',
-                        padding: 10, 
-                        cornerRadius: 4,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.label || '';
-                                if (label) { label += ': '; }
-                                if (context.parsed !== null) { label += context.parsed; }
-                                let total = context.dataset.data.reduce((acc, val) => acc + val, 0);
-                                let percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) + '%' : '0%';
-                                label += ` (${percentage})`;
-                                return label;
+            // 2. Grafik Distribusi Hasil Prediksi (Pie Chart - sudah ada) - Sesuai dengan kode asli Anda
+            const predictionDistributionCtx = document.getElementById('predictionDistributionChart');
+            if (predictionDistributionCtx) {
+                const hasDataForPie = predictionDistributionData && predictionDistributionData.length > 0 && predictionDistributionData.some(value => value > 0);
+                // ^ Dimodifikasi sedikit untuk mengecek apakah ada data yang lebih dari 0, agar pie chart tidak error jika semua data 0.
+                // Namun, logika asli Anda untuk menampilkan pesan 'Belum ada data prediksi' sudah baik. Saya kembalikan ke logika asli Anda.
+                const hasPredictionData = predictionDistributionData && predictionDistributionData.length > 0;
+
+
+                if (hasPredictionData) { // Menggunakan kondisi asli Anda jika itu yang diinginkan
+                    new Chart(predictionDistributionCtx, {
+                        type: 'pie',
+                        data: {
+                            labels: predictionDistributionLabels,
+                            datasets: [{
+                                label: 'Distribusi Prediksi', 
+                                data: predictionDistributionData,
+                                backgroundColor: ['rgb(239, 68, 68)', 'rgb(34, 197, 94)'],
+                                borderColor: ['rgb(255, 255, 255)','rgb(255, 255, 255)'],
+                                borderWidth: 2, 
+                                hoverOffset: 8
+                            }]
+                        },
+                        options: {
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { 
+                                    position: 'bottom', 
+                                    labels: { 
+                                        color: '#374151', 
+                                        padding: 15,
+                                        filter: function(legendItem, data) { // Sesuai kode asli Anda
+                                            return true; 
+                                        }
+                                    } 
+                                },
+                                tooltip: {
+                                    backgroundColor: '#1f2937', 
+                                    titleColor: '#f3f4f6', 
+                                    bodyColor: '#d1d5db',
+                                    padding: 10, 
+                                    cornerRadius: 4,
+                                    callbacks: {
+                                        label: function(context) { // Sesuai kode asli Anda
+                                            let label = context.label || '';
+                                            if (label) { label += ': '; }
+                                            if (context.parsed !== null) { label += context.parsed; }
+                                            let total = context.dataset.data.reduce((acc, val) => acc + val, 0);
+                                            let percentage = total > 0 ? ((context.parsed / total) * 100).toFixed(1) + '%' : '0%';
+                                            label += ` (${percentage})`;
+                                            return label;
+                                        }
+                                    }
+                                }
                             }
                         }
-                    }
+                    });
+                } else {
+                    predictionDistributionCtx.parentNode.innerHTML = '<p class="text-center text-gray-500 italic py-10">Belum ada data prediksi.</p>';
                 }
             }
-        });
-    } else {
-        predictionDistributionCtx.parentNode.innerHTML = '<p class="text-center text-gray-500 italic py-10">Belum ada data prediksi.</p>';
-    }
-}
 
-            // 3. Kalender Sederhana (sudah ada)
+            // 3. Kalender Sederhana (sudah ada) - Sesuai dengan kode asli Anda
             const calendarContainer = document.getElementById('calendarContainer');
-            // (Pastikan kode kalender Anda ada di sini atau di-include dengan benar)
             if (calendarContainer) {
                 const today = new Date();
                 let currentMonth = today.getMonth();
@@ -332,8 +347,7 @@ if (predictionDistributionCtx) {
             }
 
 
-            // --- GRAFIK BARU ---
-            // A. Grafik Jumlah Prediksi per Kelompok Kehamilan (Bar Chart)
+            // --- GRAFIK BARU --- (Sesuai dengan kode asli Anda)
             const pregnanciesGroupCtx = document.getElementById('pregnanciesGroupChart');
             if (pregnanciesGroupCtx && pregnanciesGroupLabels.length > 0 && pregnanciesGroupData.some(value => value > 0)) {
                 new Chart(pregnanciesGroupCtx, {
@@ -343,7 +357,7 @@ if (predictionDistributionCtx) {
                         datasets: [{
                             label: 'Jumlah Prediksi',
                             data: pregnanciesGroupData,
-                            backgroundColor: 'rgba(75, 192, 192, 0.6)', // Teal
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)', 
                             borderColor: 'rgb(75, 192, 192)',
                             borderWidth: 1
                         }]
@@ -354,7 +368,6 @@ if (predictionDistributionCtx) {
                  pregnanciesGroupCtx.parentNode.innerHTML = '<p class="text-center text-gray-500 italic py-10">Data prediksi berdasarkan kehamilan tidak tersedia.</p>';
             }
 
-            // B. Grafik Jumlah Pasien per Kelompok Umur (Bar Chart)
             const ageGroupCtx = document.getElementById('ageGroupChart');
             if (ageGroupCtx && ageGroupLabels.length > 0 && ageGroupData.some(value => value > 0)) {
                 new Chart(ageGroupCtx, {
@@ -364,7 +377,7 @@ if (predictionDistributionCtx) {
                         datasets: [{
                             label: 'Jumlah Pasien',
                             data: ageGroupData,
-                            backgroundColor: 'rgba(153, 102, 255, 0.6)', // Purple
+                            backgroundColor: 'rgba(153, 102, 255, 0.6)', 
                             borderColor: 'rgb(153, 102, 255)',
                             borderWidth: 1
                         }]
@@ -375,7 +388,6 @@ if (predictionDistributionCtx) {
                 ageGroupCtx.parentNode.innerHTML = '<p class="text-center text-gray-500 italic py-10">Data usia pasien tidak tersedia.</p>';
             }
 
-            // C. Grafik Jumlah Prediksi per Kelompok Gula Darah (Bar Chart)
             const glucoseGroupCtx = document.getElementById('glucoseGroupChart');
             if (glucoseGroupCtx && glucoseGroupLabels.length > 0 && glucoseGroupData.some(value => value > 0)) {
                 new Chart(glucoseGroupCtx, {
@@ -386,11 +398,11 @@ if (predictionDistributionCtx) {
                             label: 'Jumlah Prediksi',
                             data: glucoseGroupData,
                             backgroundColor: [
-                                'rgba(255, 99, 132, 0.6)',  // Merah muda (Low)
-                                'rgba(75, 192, 192, 0.6)',  // Teal (Normal)
-                                'rgba(255, 205, 86, 0.6)',   // Kuning (Prediabetes)
-                                'rgba(255, 159, 64, 0.6)',   // Oranye (Diabetes)
-                                'rgba(201, 203, 207, 0.6)'   // Abu-abu (High)
+                                'rgba(255, 99, 132, 0.6)',  
+                                'rgba(75, 192, 192, 0.6)',  
+                                'rgba(255, 205, 86, 0.6)',  
+                                'rgba(255, 159, 64, 0.6)',  
+                                'rgba(201, 203, 207, 0.6)'   
                             ],
                             borderColor: [
                                 'rgb(255, 99, 132)', 'rgb(75, 192, 192)',
@@ -405,7 +417,6 @@ if (predictionDistributionCtx) {
             } else if(glucoseGroupCtx) {
                 glucoseGroupCtx.parentNode.innerHTML = '<p class="text-center text-gray-500 italic py-10">Data gula darah pada prediksi tidak tersedia.</p>';
             }
-
         });
     </script>
 @endpush

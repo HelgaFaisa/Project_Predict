@@ -71,11 +71,11 @@
                             <i class="ri-add-line"></i>
                             Tambah Pasien
                         </a>
-                        <button class="relative p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors focus:outline-none">
+                        <!-- <button class="relative p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors focus:outline-none">
                             <span class="sr-only">Lihat Notifikasi</span>
                             <i class="ri-notification-3-line text-xl"></i>
                             <span class="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-1 ring-white"></span>
-                        </button>
+                        </button> -->
 
                         {{-- Profil Pengguna - Dibuat menjadi link atau dropdown --}}
                         <div class="relative" x-data="{ open: false }">

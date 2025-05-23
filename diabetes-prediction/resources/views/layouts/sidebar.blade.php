@@ -16,12 +16,12 @@
         </div>
 
         {{-- Toggle Button (Only shown on desktop) --}}
-        <button id="toggleExpandSidebar"
+        <!-- <button id="toggleExpandSidebar"
                 class="hidden lg:flex items-center justify-center w-8 h-8 rounded-md bg-white/10 text-white hover:bg-white/20 transition-colors"
                 :class="{ 'ml-auto': sidebarExpanded, 'w-full mt-5': !sidebarExpanded }">
             <i class="ri-arrow-left-s-line transition-transform duration-200"
                :class="{ 'rotate-180': !sidebarExpanded }"></i>
-        </button>
+        </button> -->
     </div>
 
     {{-- Divider --}}
