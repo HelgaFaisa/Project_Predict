@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\PatientProfileController;
 use App\Http\Controllers\Api\PredictionHistoryApiController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\PatientController;
+use App\Http\Controllers\Api\ForgotPasswordController;
 
 /*
 |--------------------------------------------------------------------------
@@ -56,7 +57,7 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/patient/prediction-history', [PredictionHistoryApiController::class, 'getCurrentUserHistory']);
 });
 
-Route::post('/login-patient', [\App\Http\Controllers\Api\PatientAuthController::class, 'login']);
+Route::post('/login-patient', [\App\Http\Controllers\Api\AuthController::class, 'login']);
 Route::get('/patient-profile', [\App\Http\Controllers\Api\PatientAuthController::class, 'profile'])->middleware('auth:sanctum');
 Route::prefix('patient')->group(function () {
     Route::post('login', [PatientAuthController::class, 'login']);
@@ -64,4 +65,12 @@ Route::prefix('patient')->group(function () {
         Route::get('profile', [PatientProfileController::class, 'profile']);
         Route::post('logout', [PatientAuthController::class, 'logout']);
     });
+
+    // FORGOT PASSWORD ROUTES - PINDAHKAN KELUAR DARI GROUP PATIENT
+Route::prefix('password')->group(function () {
+    Route::post('/forgot', [ForgotPasswordController::class, 'sendResetCode']);
+    Route::post('/verify-code', [ForgotPasswordController::class, 'verifyResetCode']);
+    Route::post('/reset', [ForgotPasswordController::class, 'resetPassword']);
+    Route::post('/resend-code', [ForgotPasswordController::class, 'resendCode']);
+});
 });

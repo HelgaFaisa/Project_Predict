@@ -5,6 +5,9 @@ import 'package:flutter_predic/model/ProfileEdit.dart';
 import 'splashscreen_page.dart'; // Import SplashScreen Anda
 import 'home_page.dart'; // Halaman utama setelah login
 import 'logindokter/login.dart'; // Import LoginPage
+import '../logindokter/lupapw.dart';
+import '../logindokter/resetscreen.dart';
+import '../logindokter/verifikasi.dart';
 
 // Import file-file lain yang dibutuhkan oleh halaman-halaman di rute
 import '../riwayatpemeriksaan/riwayat.dart';
@@ -41,13 +44,9 @@ class MyApp extends StatelessWidget {
         '/': (context) => SplashScreen(),
         // Rute untuk LoginPage
         '/login': (context) => LoginPage(),
-        // Rute untuk HomePage.
-        // Catatan: Karena HomePage memerlukan 'userName' dan 'patientId' yang didapat setelah login,
-        // navigasi dari LoginPage ke HomePage sebaiknya menggunakan MaterialPageRoute
-        // seperti yang ditunjukkan di LoginPage.dart, BUKAN named route '/home' ini
-        // jika Anda ingin melewatkan userName dan patientId dari proses login.
-        // Rute '/home' ini bisa digunakan untuk navigasi lain ke HomePage
-        // jika userName dan patientId bisa didapatkan dengan cara lain (misal dari SharedPreferences).
+        '/forgot-password': (context) => const ForgotPasswordScreen(),
+        '/verify-reset-code': (context) => const VerifyResetCodeScreen(),
+        '/reset-password': (context) => const ResetPasswordScreen(),
         '/home': (context) => HomePage(
           userName: 'Pengguna Default',
           patientId: 'default_patient_id', // <--- Tambahkan ini dengan ID placeholder
