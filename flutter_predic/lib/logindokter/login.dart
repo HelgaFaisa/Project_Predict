@@ -1,3 +1,5 @@
+// lib/login.dart
+
 import 'package:flutter/material.dart';
 import '../api/login_api.dart';
 import '../home_page.dart'; // Pastikan path ini sesuai dengan struktur foldermu
@@ -41,42 +43,42 @@ class _LoginPageState extends State<LoginPage> {
       final response = await LoginApi.login(email, password);
 
       final token = response['token']?.toString();
-      // Asumsi data user memiliki field 'name' atau 'username'
       final userData = response['user'];
-      // --- AMBIL NAMA PENGGUNA DARI RESPONS API ---
-      // Gunakan null-aware access (?.) dan default value ('Pengguna') jika field 'name' null
       final String userName = userData?['name']?.toString() ?? 'Pengguna';
-      // -------------------------------------------
-      final patientId = await LoginApi.getPatientId(); // Pastikan LoginApi.getPatientId() ada dan berfungsi
+      
+      // Ambil patientId
+      // PASTIKAN `LoginApi.getPatientId()` mengembalikan String patientId yang valid
+      final String? patientId = await LoginApi.getPatientId(); 
 
       if (token == null || token.isEmpty) {
         throw Exception('Token tidak ditemukan dalam respons.');
       }
       if (userData == null) {
-         // Ini mungkin tidak selalu error, tergantung API, tapi penting untuk mendapatkan nama
-         print('Warning: Data user tidak ditemukan dalam respons, menggunakan nama default.');
+          print('Warning: Data user tidak ditemukan dalam respons, menggunakan nama default.');
       }
+      
+      // Anda harus memutuskan bagaimana menangani jika patientId null atau kosong.
+      // Untuk saat ini, kita akan lemparkan Exception jika null/kosong.
       if (patientId == null || patientId.isEmpty) {
-        // Anda mungkin ingin menangani ini sebagai peringatan atau error, tergantung kebutuhan
-        print('Warning: ID pasien tidak ditemukan atau tidak tersimpan.');
-        // throw Exception('ID pasien tidak ditemukan atau tidak tersimpan.'); // Uncomment jika wajib
+        throw Exception('ID pasien tidak ditemukan atau tidak tersimpan setelah login.');
       }
 
       if (!mounted) return; // Cegah setState jika widget sudah tidak aktif
 
-      // --- NAVIGASI KE HOMEPAGE SAMBIL MELEWATKAN userName ---
+      // --- NAVIGASI KE HOMEPAGE SAMBIL MELEWATKAN userName DAN patientId ---
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          // Lewatkan userName ke HomePage
-          builder: (context) => HomePage(userName: userName),
+          builder: (context) => HomePage(
+            userName: userName,
+            patientId: patientId, // <--- Tambahkan ini
+          ),
         ),
       );
       // ----------------------------------------------------
 
     } catch (e) {
       setState(() {
-        // Bersihkan pesan error dari 'Exception: ' jika ada
         _errorMessage = 'Login gagal: ${e.toString().replaceAll('Exception: ', '')}';
       });
     } finally {
@@ -90,7 +92,6 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    // Bersihkan controller saat widget dibuang
     emailController.dispose();
     passwordController.dispose();
     super.dispose();

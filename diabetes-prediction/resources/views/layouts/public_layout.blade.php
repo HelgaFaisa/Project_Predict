@@ -91,68 +91,75 @@
 </head>
 <body class="bg-gradient-to-br from-brand-blue-50 to-brand-gray-50 min-h-screen flex flex-col">
 
-    <header class="glass-effect sticky top-0 z-50 shadow-sm">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-24">
-                {{-- Logo --}}
-                <div class="flex-shrink-0">
-                    <a href="{{ route('public.home') }}" class="flex items-center">
-                        <div class="flex-shrink-0 w-12 h-12 blue-gradient-bg rounded-full flex items-center justify-center shadow-md">
-                            <i class="ri-heart-pulse-line text-white text-2xl"></i>
-                        </div>
-                        <div class="ml-3">
-                            <span class="text-2xl font-display font-bold gradient-text-blue">DiabetaCare</span>
-                            <span class="block text-xs text-brand-primary-DEFAULT mt-0.5">Solusi Kesehatan Terdepan</span>
-                        </div>
-                    </a>
-                </div>
+<header class="glass-effect sticky top-0 z-50 shadow-sm">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-24">
+            {{-- Logo --}}
+            <div class="flex-shrink-0">
+                <a href="{{ route('public.home') }}" class="flex items-center">
+                    <div class="flex-shrink-0 w-12 h-12 blue-gradient-bg rounded-full flex items-center justify-center shadow-md">
+                        <i class="ri-heart-pulse-line text-white text-2xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <span class="text-2xl font-display font-bold gradient-text-blue">DiabetaCare</span>
+                        <span class="block text-xs text-brand-primary-DEFAULT mt-0.5">Solusi Kesehatan Terdepan</span>
+                    </div>
+                </a>
+            </div>
 
-                {{-- Desktop Navigation --}}
-                <nav class="hidden md:flex space-x-6 items-center">
-                    <a href="{{ route('public.home') }}" class="nav-link {{ request()->routeIs('public.home') ? 'active-nav-link' : '' }}">Beranda</a>
-                    <a href="{{ route('public.articles.index') }}" class="nav-link {{ request()->routeIs('public.articles.index') || request()->routeIs('public.articles.show') ? 'active-nav-link' : '' }}">Artikel Edukasi</a>
-                    <a href="{{ route('public.about') }}" class="nav-link {{ request()->routeIs('public.about') ? 'active-nav-link' : '' }}">Tentang Kami</a>
-                </nav>
+            {{-- Desktop Navigation (Tautan Utama) --}}
+            <nav class="hidden md:flex space-x-6 items-center">
+                <a href="{{ route('public.home') }}" class="nav-link {{ request()->routeIs('public.home') ? 'active-nav-link' : '' }}">Beranda</a>
+                <a href="{{ route('public.articles.index') }}" class="nav-link {{ request()->routeIs('public.articles.index') || request()->routeIs('public.articles.show') ? 'active-nav-link' : '' }}">Artikel Edukasi</a>
+                <a href="{{ route('public.about') }}" class="nav-link {{ request()->routeIs('public.about') ? 'active-nav-link' : '' }}">Tentang Kami</a>
+            </nav>
 
-                {{-- Tombol WhatsApp (Desktop) --}}
-                <div class="hidden md:flex items-center">
-                    <a href="https://wa.me/6281234567890?text={{ urlencode('Halo DiabetaCare, saya ingin bertanya...') }}" target="_blank" rel="noopener noreferrer"
-                       class="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-full text-sm font-medium hover:bg-green-600 transition-colors shadow-md"
-                       title="Hubungi kami via WhatsApp">
-                        <i class="ri-whatsapp-fill text-lg mr-2"></i> Hubungi Kami
-                    </a>
-                </div>
+            {{-- Grup Tombol Kanan: Ikon Login & Tombol WhatsApp (Desktop) --}}
+            <div class="hidden md:flex items-center space-x-3"> 
+                {{-- Tombol Ikon Login --}}
+                <a href="{{ route('login') }}" title="Login Admin"
+                   class="p-2 text-brand-gray-700 hover:text-brand-primary-DEFAULT transition-colors duration-150 rounded-md hover:bg-brand-blue-50">
+                    <i class="ri-user-line text-xl"></i>
+                </a>
 
-                {{-- Mobile Menu Button --}}
-                <div class="md:hidden">
-                    <button id="mobileMenuButton" type="button" class="inline-flex items-center justify-center p-2 rounded-lg text-brand-gray-500 hover:text-brand-primary-DEFAULT hover:bg-brand-gray-100 focus:outline-none" aria-controls="mobile-menu" aria-expanded="false">
-                        <span class="sr-only">Buka menu utama</span>
-                        <i class="ri-menu-3-line text-2xl block" id="menuIconOpen"></i>
-                        <i class="ri-close-line text-2xl hidden" id="menuIconClose"></i>
-                    </button>
-                </div>
+                {{-- Tombol Ikon WhatsApp (Desktop) - GRADASI --}}
+                <a href="https://wa.me/6281310384433?text={{ urlencode('Halo DiabetaCare, saya ingin bertanya...') }}" target="_blank" rel="noopener noreferrer"
+                   class="inline-flex items-center justify-center p-2 blue-gradient-bg text-white rounded-full hover:opacity-90 transition-opacity duration-150 shadow-md"
+                   title="Hubungi kami via WhatsApp">
+                    <i class="ri-whatsapp-fill text-xl"></i>
+                </a>
+            </div>
+
+            {{-- Mobile Menu Button --}}
+            <div class="md:hidden">
+                <button id="mobileMenuButton" type="button" class="inline-flex items-center justify-center p-2 rounded-lg text-brand-gray-500 hover:text-brand-primary-DEFAULT hover:bg-brand-gray-100 focus:outline-none" aria-controls="mobile-menu" aria-expanded="false">
+                    <span class="sr-only">Buka menu utama</span>
+                    <i class="ri-menu-3-line text-2xl block" id="menuIconOpen"></i>
+                    <i class="ri-close-line text-2xl hidden" id="menuIconClose"></i>
+                </button>
             </div>
         </div>
+    </div>
 
-        {{-- Mobile Menu --}}
-        <div class="md:hidden hidden" id="mobileMenu">
-            <div class="px-4 pt-3 pb-6 space-y-2 border-t border-brand-gray-100 bg-white shadow-lg">
-                <a href="{{ route('public.home') }}" class="block px-4 py-3 rounded-lg text-base font-medium {{ request()->routeIs('public.home') ? 'text-brand-primary-DEFAULT bg-brand-blue-50' : 'text-brand-gray-700 hover:text-brand-primary-DEFAULT hover:bg-brand-gray-50' }}">Beranda</a>
-                <a href="{{ route('public.articles.index') }}" class="block px-4 py-3 rounded-lg text-base font-medium {{ request()->routeIs('public.articles.index') || request()->routeIs('public.articles.show') ? 'text-brand-primary-DEFAULT bg-brand-blue-50' : 'text-brand-gray-700 hover:text-brand-primary-DEFAULT hover:bg-brand-gray-50' }}">Artikel Edukasi</a>
-                <a href="{{ route('public.about') }}" class="block px-4 py-3 rounded-lg text-base font-medium {{ request()->routeIs('public.about') ? 'text-brand-primary-DEFAULT bg-brand-blue-50' : 'text-brand-gray-700 hover:text-brand-primary-DEFAULT hover:bg-brand-gray-50' }}">Tentang Kami</a>
+    {{-- Mobile Menu --}}
+    <div class="md:hidden hidden" id="mobileMenu">
+        <div class="px-4 pt-3 pb-6 space-y-2 border-t border-brand-gray-100 bg-white shadow-lg">
+            <a href="{{ route('public.home') }}" class="block px-4 py-3 rounded-lg text-base font-medium {{ request()->routeIs('public.home') ? 'text-brand-primary-DEFAULT bg-brand-blue-50' : 'text-brand-gray-700 hover:text-brand-primary-DEFAULT hover:bg-brand-gray-50' }}">Beranda</a>
+            <a href="{{ route('public.articles.index') }}" class="block px-4 py-3 rounded-lg text-base font-medium {{ request()->routeIs('public.articles.index') || request()->routeIs('public.articles.show') ? 'text-brand-primary-DEFAULT bg-brand-blue-50' : 'text-brand-gray-700 hover:text-brand-primary-DEFAULT hover:bg-brand-gray-50' }}">Artikel Edukasi</a>
+            <a href="{{ route('public.about') }}" class="block px-4 py-3 rounded-lg text-base font-medium {{ request()->routeIs('public.about') ? 'text-brand-primary-DEFAULT bg-brand-blue-50' : 'text-brand-gray-700 hover:text-brand-primary-DEFAULT hover:bg-brand-gray-50' }}">Tentang Kami</a>
 
-                <div class="pt-5 mt-5 border-t border-brand-gray-200">
-                    <a href="https://wa.me/6281234567890?text={{ urlencode('Halo DiabetaCare, saya ingin bertanya...') }}" target="_blank" rel="noopener noreferrer"
-                       class="flex items-center justify-center w-full px-4 py-3 bg-green-500 text-white rounded-lg text-base font-medium hover:bg-green-600 transition-colors shadow-md">
-                        <i class="ri-whatsapp-fill text-lg mr-2"></i> Hubungi via WhatsApp
-                    </a>
-                    <a href="{{ route('login') }}" class="block text-center mt-4 px-4 py-3 rounded-lg text-sm font-medium text-brand-gray-600 hover:text-brand-primary-DEFAULT hover:bg-brand-blue-50">
-                        Login Admin
-                    </a>
-                </div>
+            <div class="pt-5 mt-5 border-t border-brand-gray-200">
+                <a href="https://wa.me/6281310384433?text={{ urlencode('Halo DiabetaCare, saya ingin bertanya...') }}" target="_blank" rel="noopener noreferrer"
+                   class="flex items-center justify-center w-full px-4 py-3 bg-green-500 text-white rounded-lg text-base font-medium hover:bg-green-600 transition-colors shadow-md">
+                    <i class="ri-whatsapp-fill text-lg mr-2"></i> Hubungi via WhatsApp
+                </a>
+                <a href="{{ route('login') }}" class="block text-center mt-4 px-4 py-3 rounded-lg text-sm font-medium text-brand-gray-600 hover:text-brand-primary-DEFAULT hover:bg-brand-blue-50">
+                    Login Admin
+                </a>
             </div>
         </div>
-    </header>
+    </div>
+</header>
 
     <main class="py-12 sm:py-16 flex-grow">
         {{-- PASTIKAN ADA KONTEN DI SINI UNTUK TESTING --}}
@@ -163,60 +170,54 @@
     </main>
 
     {{-- PERUBAHAN WARNA FOOTER DAN PENAMBAHAN SHADOW JIKA DIINGINKAN --}}
-    <footer class="bg-white text-brand-charcoal shadow-footer-shadow">
+<footer class="blue-gradient-bg text-white shadow-footer-shadow"> 
         <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-12">
                 <div class="col-span-1 md:col-span-2">
                     <div class="flex items-center mb-6">
-                        {{-- Jika footer putih, logo mungkin perlu disesuaikan agar terlihat --}}
                         <div class="flex-shrink-0 w-12 h-12 blue-gradient-bg rounded-full flex items-center justify-center shadow-md">
                             <i class="ri-heart-pulse-line text-white text-2xl"></i>
                         </div>
                         <div class="ml-3">
-                            {{-- Ubah warna teks jika perlu agar kontras dengan bg putih --}}
-                            <span class="text-2xl font-display font-bold text-brand-primary-DEFAULT">DiabetaCare</span>
-                            <span class="block text-xs text-brand-primary-DEFAULT mt-0.5">Solusi Kesehatan Terdepan</span>
+                            <span class="text-2xl font-display font-bold text-white">DiabetaCare</span>
+                            <span class="block text-xs text-brand-blue-100 mt-0.5">Solusi Kesehatan Terdepan</span>
                         </div>
                     </div>
-                    {{-- Ubah warna teks jika perlu --}}
-                    <p class="text-brand-gray-700 leading-relaxed mb-8 max-w-md">Menyediakan informasi dan dukungan untuk membantu Anda mengelola diabetes dan hidup lebih sehat.</p>
+                    <p class="text-brand-blue-50 leading-relaxed mb-8 max-w-md">Menyediakan informasi dan dukungan untuk membantu Anda mengelola diabetes dan hidup lebih sehat.</p>
                     <div class="flex space-x-5">
-                        {{-- Ubah warna ikon jika perlu --}}
-                        <a href="#" class="text-brand-gray-500 hover:text-brand-primary-DEFAULT transition-colors"><i class="ri-facebook-circle-fill text-2xl"></i></a>
-                        <a href="#" class="text-brand-gray-500 hover:text-brand-primary-DEFAULT transition-colors"><i class="ri-instagram-fill text-2xl"></i></a>
-                        <a href="#" class="text-brand-gray-500 hover:text-brand-primary-DEFAULT transition-colors"><i class="ri-twitter-x-fill text-2xl"></i></a>
-                        <a href="#" class="text-brand-gray-500 hover:text-brand-primary-DEFAULT transition-colors"><i class="ri-linkedin-box-fill text-2xl"></i></a>
+                        <a href="#" class="text-brand-blue-200 hover:text-white transition-colors"><i class="ri-facebook-circle-fill text-2xl"></i></a>
+                        <a href="#" class="text-brand-blue-200 hover:text-white transition-colors"><i class="ri-instagram-fill text-2xl"></i></a>
+                        <a href="#" class="text-brand-blue-200 hover:text-white transition-colors"><i class="ri-twitter-x-fill text-2xl"></i></a>
+                        <a href="#" class="text-brand-blue-200 hover:text-white transition-colors"><i class="ri-linkedin-box-fill text-2xl"></i></a>
                     </div>
                 </div>
                 <div>
-                    {{-- Ubah warna teks judul jika perlu --}}
-                    <h3 class="text-lg font-semibold text-brand-navy mb-5 font-display">Tautan Cepat</h3>
-                    <ul class="space-y-3 text-brand-gray-600"> 
-                        <li><a href="{{ route('public.home') }}" class="hover:text-brand-primary-DEFAULT transition-colors inline-flex items-center"><i class="ri-arrow-right-s-line mr-2"></i> Beranda</a></li>
-                        <li><a href="{{ route('public.articles.index') }}" class="hover:text-brand-primary-DEFAULT transition-colors inline-flex items-center"><i class="ri-arrow-right-s-line mr-2"></i> Artikel Edukasi</a></li>
-                        <li><a href="{{ route('public.about') }}" class="hover:text-brand-primary-DEFAULT transition-colors inline-flex items-center"><i class="ri-arrow-right-s-line mr-2"></i> Tentang Kami</a></li>
-                        <li><a href="#" class="hover:text-brand-primary-DEFAULT transition-colors inline-flex items-center"><i class="ri-arrow-right-s-line mr-2"></i> Kebijakan Privasi</a></li>
-                        <li><a href="#" class="hover:text-brand-primary-DEFAULT transition-colors inline-flex items-center"><i class="ri-arrow-right-s-line mr-2"></i> Syarat & Ketentuan</a></li>
+                    <h3 class="text-lg font-semibold text-white mb-5 font-display">Tautan Cepat</h3>
+                    <ul class="space-y-3 text-brand-blue-100">
+                        <li><a href="{{ route('public.home') }}" class="hover:text-white transition-colors inline-flex items-center"><i class="ri-arrow-right-s-line mr-2 text-brand-blue-300"></i> Beranda</a></li>
+                        <li><a href="{{ route('public.articles.index') }}" class="hover:text-white transition-colors inline-flex items-center"><i class="ri-arrow-right-s-line mr-2 text-brand-blue-300"></i> Artikel Edukasi</a></li>
+                        <li><a href="{{ route('public.about') }}" class="hover:text-white transition-colors inline-flex items-center"><i class="ri-arrow-right-s-line mr-2 text-brand-blue-300"></i> Tentang Kami</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors inline-flex items-center"><i class="ri-arrow-right-s-line mr-2 text-brand-blue-300"></i> Kebijakan Privasi</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors inline-flex items-center"><i class="ri-arrow-right-s-line mr-2 text-brand-blue-300"></i> Syarat & Ketentuan</a></li>
                     </ul>
                 </div>
                 <div>
-                     {{-- Ubah warna teks judul jika perlu --}}
-                    <h3 class="text-lg font-semibold text-brand-navy mb-5 font-display">Hubungi Kami</h3>
-                    <ul class="space-y-4 text-brand-gray-600"> 
-                        <li class="flex items-start"><i class="ri-map-pin-2-line text-brand-primary-DEFAULT mt-1 mr-3"></i><span>Kantor Pusat DiabetaCare<br>Jl. Kesehatan No. 123<br>Jakarta, Indonesia</span></li>
-                        <li class="flex items-center"><i class="ri-mail-send-line text-brand-primary-DEFAULT mr-3"></i><span>info@diabetacare.id</span></li>
-                        <li class="flex items-center"><i class="ri-phone-line text-brand-primary-DEFAULT mr-3"></i><span>+62 21 7777 8888</span></li>
-                        <li class="flex items-center"><i class="ri-whatsapp-line text-brand-primary-DEFAULT mr-3"></i><span>+62 812 3456 7890</span></li>
+                    <h3 class="text-lg font-semibold text-white mb-5 font-display">Hubungi Kami</h3>
+                    <ul class="space-y-4 text-brand-blue-100">
+                        <li class="flex items-start"><i class="ri-map-pin-2-line text-brand-blue-300 mt-1 mr-3"></i><span>Kantor Pusat DiabetaCare<br>Jl. Kesehatan No. 123<br>Jakarta, Indonesia</span></li>
+                        <li class="flex items-center"><i class="ri-mail-send-line text-brand-blue-300 mr-3"></i><span>info@diabetacare.id</span></li>
+                        <li class="flex items-center"><i class="ri-phone-line text-brand-blue-300 mr-3"></i><span>+62 81310 4433</span></li>
+                        <li class="flex items-center"><i class="ri-whatsapp-line text-brand-blue-300 mr-3"></i><span>+62 81310 4433</span></li>
                     </ul>
                 </div>
             </div>
-            <div class="mt-16 pt-8 border-t border-brand-gray-200 text-center text-sm text-brand-gray-500"> 
+            <div class="mt-16 pt-8 border-t border-brand-blue-500 text-center text-sm text-brand-blue-200"> 
                 <div class="flex flex-col md:flex-row items-center justify-between">
                     <p>&copy; {{ date('Y') }} DiabetaCare. Solusi Kesehatan Terdepan.</p>
                     <div class="mt-4 md:mt-0 flex items-center justify-center space-x-6">
-                        <a href="#" class="text-brand-gray-500 hover:text-brand-primary-DEFAULT transition-colors">Privacy Policy</a>
-                        <span class="hidden md:inline">•</span>
-                        <a href="#" class="text-brand-gray-500 hover:text-brand-primary-DEFAULT transition-colors">Terms of Service</a>
+                        <a href="#" class="text-brand-blue-200 hover:text-white transition-colors">Privacy Policy</a>
+                        <span class="hidden md:inline text-brand-blue-200">•</span>
+                        <a href="#" class="text-brand-blue-200 hover:text-white transition-colors">Terms of Service</a>
                     </div>
                 </div>
             </div>

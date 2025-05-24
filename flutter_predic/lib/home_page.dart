@@ -1,3 +1,5 @@
+// lib/homepage.dart
+
 import 'package:flutter/material.dart';
 import 'riwayatpemeriksaan/riwayat.dart';
 import 'edukasi/edukasi.dart';
@@ -7,11 +9,15 @@ import '/model/gejala.dart';
 import 'logindokter/login.dart';
 import '../api/riwayat_api.dart';
 import 'api/login_api.dart';
-// Removed duplicate import: // import '../edukasi/edukasi.dart'
 import '../edukasi/ArtikelDetailPage.dart';
 import '../api/edukasi_api.dart';
 import '../api/gejala_api.dart';
 import '../model/ProfileHeader.dart';
+
+// Import model dan API untuk data kesehatan
+import '../model/health_data.dart';
+import '../api/health_data_api.dart';
+import 'package:fl_chart/fl_chart.dart'; // Import fl_chart
 
 void main() {
   runApp(const MyApp());
@@ -40,11 +46,12 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Home Page - Sekarang menerima userName
+// Home Page - Sekarang menerima userName dan patientId
 class HomePage extends StatefulWidget {
   final String userName;
+  final String patientId; // Tambahkan patientId
 
-  const HomePage({Key? key, required this.userName}) : super(key: key);
+  const HomePage({Key? key, required this.userName, required this.patientId}) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -60,13 +67,20 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Daftar halaman, sesuaikan jika ada halaman yang butuh data spesifik
-  final List<Widget> _pages = [
-    const HealthGraphPage(),
-    RiwayatPage(),
-    EdukasiPage(),
-    const TargetHidupSehatPage(),
-    GejalaPage(),
-  ];
+  // Kirimkan patientId ke HealthGraphPage
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      HealthGraphPage(patientId: widget.patientId), // Kirim patientId
+      RiwayatPage(),
+      EdukasiPage(),
+      const TargetHidupSehatPage(),
+      GejalaPage(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,9 +96,9 @@ class _HomePageState extends State<HomePage> {
         ),
         child: Column(
           children: [
+            // Pastikan ProfileHeader hanya muncul di halaman utama (index 0)
             if (selectedIndex == 0) ProfileHeader(userName: widget.userName),
             
-            // Fixed AnimatedSwitcher issue - removed duplicate child property
             Expanded(
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 400),
@@ -127,9 +141,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// Floating Bottom Navigation Bar
-// Removed redundant BottomNavBar class that isn't used in the main app flow
-
+// Floating Bottom Navigation Bar (tidak ada perubahan)
 class FloatingNavBar extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
@@ -236,8 +248,8 @@ class FloatingNavBar extends StatelessWidget {
                 size: isSelected ? 26 : 24,
               ),
             ),
-            if (isSelected)
-              const SizedBox(height: 20),
+            // Hapus Text jika tidak terpilih, agar tidak overlap
+            if (isSelected) const SizedBox(height: 15), // Mengurangi jarak
             if (isSelected)
               Text(
                 label,
@@ -247,6 +259,8 @@ class FloatingNavBar extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+            // Jika tidak terpilih, tambahkan sedikit ruang kosong agar tingginya sama
+            if (!isSelected) const SizedBox(height: 16), // Sesuaikan jarak agar item tidak terpilih tetap pada posisi yang sama
           ],
         ),
       ),
@@ -295,13 +309,28 @@ class NavBarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) {
-    return false;
+    return false; // Biasanya false jika tidak ada perubahan state dalam painter itu sendiri
   }
 }
 
-// Health Graph Page
-class HealthGraphPage extends StatelessWidget {
-  const HealthGraphPage({Key? key}) : super(key: key);
+// Health Graph Page - Sekarang StatefulWidget untuk fetching data
+class HealthGraphPage extends StatefulWidget {
+  final String patientId; // Menerima patientId
+
+  const HealthGraphPage({Key? key, required this.patientId}) : super(key: key);
+
+  @override
+  State<HealthGraphPage> createState() => _HealthGraphPageState();
+}
+
+class _HealthGraphPageState extends State<HealthGraphPage> {
+  late Future<List<HealthData>> _healthDataFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _healthDataFuture = HealthDataApi().fetchHealthData(widget.patientId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -327,7 +356,22 @@ class HealthGraphPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          _GraphCard(),
+          // Gunakan FutureBuilder untuk menampilkan data saat sudah siap
+          FutureBuilder<List<HealthData>>(
+            future: _healthDataFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text('Tidak ada data kesehatan tersedia.'));
+              } else {
+                // Data sudah tersedia, kirim ke _GraphCard
+                return _GraphCard(healthData: snapshot.data!);
+              }
+            },
+          ),
           const SizedBox(height: 20),
           _DescriptionCard(),
           const SizedBox(height: 100), // Untuk jarak dengan floating navbar
@@ -338,6 +382,10 @@ class HealthGraphPage extends StatelessWidget {
 }
 
 class _GraphCard extends StatelessWidget {
+  final List<HealthData> healthData; // Menerima data kesehatan
+
+  const _GraphCard({Key? key, required this.healthData}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return _CardContainer(
@@ -362,7 +410,7 @@ class _GraphCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  'Bulanan',
+                  'Bulanan', // Ini bisa dibuat dinamis (Harian, Mingguan, Bulanan)
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -380,12 +428,178 @@ class _GraphCard extends StatelessWidget {
               _LegendItem(color: Colors.blue.shade400, label: 'BMI'),
               const SizedBox(width: 16),
               _LegendItem(color: Colors.green.shade400, label: 'Tekanan Darah'),
+              const SizedBox(width: 16),
+              _LegendItem(color: Colors.orange.shade400, label: 'Berat Badan'), // Tambah legend berat badan
             ],
           ),
           const SizedBox(height: 16),
-          const SizedBox(height: 200, child: EnhancedLineChart()),
+          SizedBox(
+            height: 250, // Tinggikan sedikit agar lebih jelas
+            child: LineChart(
+              _buildChartData(healthData), // Kirim data ke fungsi builder chart
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  // Fungsi untuk membangun data chart dari HealthData
+  LineChartData _buildChartData(List<HealthData> data) {
+    // Pastikan data diurutkan berdasarkan tanggal
+    data.sort((a, b) => a.predictionTimestamp.compareTo(b.predictionTimestamp));
+
+    // Ambil nilai minimum dan maksimum untuk sumbu Y
+    double minGlucose = data.map((e) => double.tryParse(e.glucose) ?? 0.0).reduce((a, b) => a < b ? a : b);
+    double maxGlucose = data.map((e) => double.tryParse(e.glucose) ?? 0.0).reduce((a, b) => a > b ? a : b);
+    
+    double minBp = data.map((e) => double.tryParse(e.bloodPressure) ?? 0.0).reduce((a, b) => a < b ? a : b);
+    double maxBp = data.map((e) => double.tryParse(e.bloodPressure) ?? 0.0).reduce((a, b) => a > b ? a : b);
+
+    double minBmi = data.map((e) => double.tryParse(e.bmi) ?? 0.0).reduce((a, b) => a < b ? a : b);
+    double maxBmi = data.map((e) => double.tryParse(e.bmi) ?? 0.0).reduce((a, b) => a > b ? a : b);
+
+    double minWeight = data.map((e) => double.tryParse(e.weight) ?? 0.0).reduce((a, b) => a < b ? a : b);
+    double maxWeight = data.map((e) => double.tryParse(e.weight) ?? 0.0).reduce((a, b) => a > b ? a : b);
+
+    // Tentukan range yang agak luas untuk sumbu Y agar grafik tidak terlalu padat
+    double minY = [minGlucose, minBp, minBmi * 5, minWeight].reduce((a, b) => a < b ? a : b) - 10; // Mengurangi sedikit
+    double maxY = [maxGlucose, maxBp, maxBmi * 5, maxWeight].reduce((a, b) => a > b ? a : b) + 10; // Menambahkan sedikit
+    
+    // Normalisasi data untuk fl_chart (biasanya tidak perlu normalisasi jika nilai aktual ditampilkan)
+    // fl_chart akan secara otomatis menyesuaikan skala berdasarkan min/max Y axis yang Anda berikan.
+
+    // Ambil timestamp dari data
+    final firstTimestamp = data.first.predictionTimestamp.millisecondsSinceEpoch.toDouble();
+    final lastTimestamp = data.last.predictionTimestamp.millisecondsSinceEpoch.toDouble();
+    final double minX = firstTimestamp;
+    final double maxX = lastTimestamp;
+
+    // List of LineBarSpot for each metric
+    List<FlSpot> glucoseSpots = data.asMap().entries.map((entry) {
+      return FlSpot(entry.value.predictionTimestamp.millisecondsSinceEpoch.toDouble(), double.parse(entry.value.glucose));
+    }).toList();
+
+    List<FlSpot> bpSpots = data.asMap().entries.map((entry) {
+      return FlSpot(entry.value.predictionTimestamp.millisecondsSinceEpoch.toDouble(), double.parse(entry.value.bloodPressure));
+    }).toList();
+
+    List<FlSpot> bmiSpots = data.asMap().entries.map((entry) {
+      // Skalakan BMI agar terlihat di grafik yang sama dengan Glukosa/Tekanan Darah
+      // Misal, kalikan 5 agar rentang nilainya mirip. Sesuaikan skalanya jika perlu.
+      return FlSpot(entry.value.predictionTimestamp.millisecondsSinceEpoch.toDouble(), double.parse(entry.value.bmi) * 5);
+    }).toList();
+
+    List<FlSpot> weightSpots = data.asMap().entries.map((entry) {
+      // Skalakan berat badan jika perlu, atau biarkan nilai aslinya
+      return FlSpot(entry.value.predictionTimestamp.millisecondsSinceEpoch.toDouble(), double.parse(entry.value.weight));
+    }).toList();
+
+
+    return LineChartData(
+      gridData: FlGridData(
+        show: true,
+        drawVerticalLine: true,
+        getDrawingHorizontalLine: (value) => FlLine(
+          color: Colors.grey.withOpacity(0.1),
+          strokeWidth: 1,
+        ),
+        getDrawingVerticalLine: (value) => FlLine(
+          color: Colors.grey.withOpacity(0.1),
+          strokeWidth: 1,
+        ),
+      ),
+      titlesData: FlTitlesData(
+        show: true,
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 30,
+            interval: (maxX - minX) / (data.length > 1 ? data.length - 1 : 1), // Sesuaikan interval
+            getTitlesWidget: (value, meta) {
+              final DateTime date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
+              String formattedDate = '${date.day}/${date.month}'; // Format tanggal
+              return SideTitleWidget(
+                axisSide: meta.axisSide,
+                space: 8.0,
+                child: Text(formattedDate, style: TextStyle(color: Colors.grey[600], fontSize: 10)),
+              );
+            },
+          ),
+        ),
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 40,
+            getTitlesWidget: (value, meta) {
+              // Menyesuaikan label Y-axis berdasarkan skala (misal, BMI yang diskalakan)
+              String text;
+              if (value >= 0 && value <= maxY) {
+                // Untuk Glukosa/BP/Weight, tampilkan nilai asli
+                text = value.toInt().toString();
+                
+                // Tambahkan label spesifik untuk BMI jika diskalakan
+                // Misalnya, jika BMI diskalakan x5, tampilkan nilai aslinya / 5
+           if (value.toInt() % 20 != 0 && value.toInt() % 10 !=0) { // Contoh: hanya tampilkan kelipatan 10/20
+                return Container(); // Sembunyikan label yang bukan kelipatan 10/20
+            }
+
+              } else {
+                return Container(); // Sembunyikan label di luar rentang
+              }
+              return Text(text, style: TextStyle(color: Colors.grey[600], fontSize: 10));
+            },
+          ),
+        ),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      ),
+      borderData: FlBorderData(
+        show: true,
+        border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
+      ),
+      minX: minX,
+      maxX: maxX,
+      minY: minY,
+      maxY: maxY,
+      lineBarsData: [
+        LineChartBarData(
+          spots: glucoseSpots,
+          isCurved: true,
+          color: Colors.purple.shade400,
+          barWidth: 2,
+          isStrokeCapRound: true,
+          dotData: FlDotData(show: true),
+          belowBarData: BarAreaData(show: true, color: Colors.purple.shade400.withOpacity(0.1)),
+        ),
+        LineChartBarData(
+          spots: bpSpots,
+          isCurved: true,
+          color: Colors.green.shade400,
+          barWidth: 2,
+          isStrokeCapRound: true,
+          dotData: FlDotData(show: true),
+          belowBarData: BarAreaData(show: true, color: Colors.green.shade400.withOpacity(0.1)),
+        ),
+        LineChartBarData(
+          spots: bmiSpots,
+          isCurved: true,
+          color: Colors.blue.shade400,
+          barWidth: 2,
+          isStrokeCapRound: true,
+          dotData: FlDotData(show: true),
+          belowBarData: BarAreaData(show: true, color: Colors.blue.shade400.withOpacity(0.1)),
+        ),
+        LineChartBarData(
+          spots: weightSpots,
+          isCurved: true,
+          color: Colors.orange.shade400, // Warna baru untuk Berat Badan
+          barWidth: 2,
+          isStrokeCapRound: true,
+          dotData: FlDotData(show: true),
+          belowBarData: BarAreaData(show: true, color: Colors.orange.shade400.withOpacity(0.1)),
+        ),
+      ],
     );
   }
 }
@@ -448,7 +662,7 @@ class _DescriptionCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Grafik ini menunjukkan tingkat glukosa dan tekanan darah Anda selama periode pengukuran terakhir. Tren menunjukkan fluktuasi yang perlu diperhatikan.',
+            'Grafik ini menunjukkan tingkat glukosa, BMI, tekanan darah, dan berat badan Anda selama periode pengukuran terakhir. Tren menunjukkan fluktuasi yang perlu diperhatikan.',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey[700],
@@ -514,146 +728,7 @@ class _CardContainer extends StatelessWidget {
   }
 }
 
-// Enhanced Line Chart
-class EnhancedLineChart extends StatelessWidget {
-  const EnhancedLineChart({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(double.infinity, 200),
-      painter: EnhancedLineChartPainter(),
-    );
-  }
-}
-
-class EnhancedLineChartPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final width = size.width;
-    final height = size.height;
-
-    // Grid paint
-    final gridPaint = Paint()
-      ..color = Colors.grey.withOpacity(0.1)
-      ..strokeWidth = 1;
-
-    // Axis labels paint
-    final textPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    );
-
-    // Draw grid
-    for (int i = 0; i <= 5; i++) {
-      final y = height * i / 5;
-      canvas.drawLine(Offset(0, y), Offset(width, y), gridPaint);
-
-      // Draw Y-axis labels
-      textPainter.text = TextSpan(
-        text: '${100 - (i * 20)}',
-        style: TextStyle(color: Colors.grey[600], fontSize: 10),
-      );
-      textPainter.layout();
-      textPainter.paint(canvas, Offset(-25, y - textPainter.height / 2));
-    }
-
-    for (int i = 0; i <= 8; i++) {
-      final x = width * i / 8;
-      canvas.drawLine(Offset(x, 0), Offset(x, height), gridPaint);
-
-      // Draw X-axis labels
-      final month = _getMonthName(i);
-      textPainter.text = TextSpan(
-        text: month,
-        style: TextStyle(color: Colors.grey[600], fontSize: 10),
-      );
-      textPainter.layout();
-      textPainter.paint(canvas, Offset(x - textPainter.width / 2, height + 5));
-    }
-
-    // Draw lines and points for each dataset
-    _drawDataset(canvas, size, Colors.purple.shade400);
-    _drawDataset(canvas, size, Colors.blue.shade400, offset: 0.15);
-    _drawDataset(canvas, size, Colors.green.shade400, offset: -0.1);
-  }
-
-  void _drawDataset(Canvas canvas, Size size, Color color, {double offset = 0}) {
-    final width = size.width;
-    final height = size.height;
-
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final pointPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final shadowPaint = Paint()
-      ..color = color.withOpacity(0.15)
-      ..style = PaintingStyle.fill;
-
-    // Generate slightly different data points for each dataset
-    final points = [
-      Offset(width * 0 / 8, height * (0.7 + offset)),
-      Offset(width * 1 / 8, height * (0.5 + offset)),
-      Offset(width * 2 / 8, height * (0.6 + offset)),
-      Offset(width * 3 / 8, height * (0.4 + offset)),
-      Offset(width * 4 / 8, height * (0.5 + offset)),
-      Offset(width * 5 / 8, height * (0.35 + offset)),
-      Offset(width * 6 / 8, height * (0.4 + offset)),
-      Offset(width * 7 / 8, height * (0.2 + offset)),
-      Offset(width * 8 / 8, height * (0.3 + offset)),
-    ];
-
-    // Draw line
-    final path = Path()..moveTo(points.first.dx, points.first.dy);
-    for (int i = 1; i < points.length; i++) {
-      final p0 = points[i - 1];
-      final p1 = points[i];
-
-      // Create smooth curve
-      final controlPoint1 = Offset(
-        p0.dx + (p1.dx - p0.dx) / 2,
-        p0.dy,
-      );
-      final controlPoint2 = Offset(
-        p0.dx + (p1.dx - p0.dx) / 2,
-        p1.dy,
-      );
-
-      path.cubicTo(
-        controlPoint1.dx, controlPoint1.dy,
-        controlPoint2.dx, controlPoint2.dy,
-        p1.dx, p1.dy,
-      );
-    }
-
-    // Draw shadow
-    final shadowPath = Path()..addPath(path, Offset.zero);
-    shadowPath.lineTo(width, height);
-    shadowPath.lineTo(0, height);
-    shadowPath.close();
-    canvas.drawPath(shadowPath, shadowPaint);
-
-    // Draw line
-    canvas.drawPath(path, paint);
-
-    // Draw points
-    for (var point in points) {
-      canvas.drawCircle(point, 4, pointPaint);
-      canvas.drawCircle(point, 2, Paint()..color = Colors.white);
-    }
-  }
-
-  String _getMonthName(int index) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep'];
-    return index < months.length ? months[index] : '';
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => true;
-}
+// Removed EnhancedLineChartPainter and EnhancedLineChart
+// Replaced with direct use of LineChart from fl_chart library.
+// The CustomPainter for chart was too complex and not scalable for real data.
+// fl_chart is the industry standard for charting in Flutter.
