@@ -90,8 +90,16 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // Metode baru untuk navigasi ke halaman lupa password
+  void _navigateToForgotPassword() {
+    // Anda perlu mendefinisikan rute '/forgot-password' di MaterialApp Anda (di main.dart)
+    // Contoh: routes: { '/forgot-password': (context) => ForgotPasswordPage(), }
+    Navigator.pushNamed(context, '/forgot-password');
+  }
+
   @override
   void dispose() {
+    // Bersihkan controller saat widget dibuang
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
@@ -178,20 +186,19 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('Belum punya akun? '),
-                      GestureDetector(
-                        onTap: () {
-                          // TODO: Navigasi ke halaman pendaftaran
-                        },
-                        child: const Text(
-                          'Daftar',
-                          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                  // Bagian "Lupa Password?" yang menggantikan "Belum punya akun? Daftar"
+                  Center(
+                    child: GestureDetector(
+                      onTap: _navigateToForgotPassword,
+                      child: const Text(
+                        'Lupa Password?',
+                        style: TextStyle(
+                          color: Colors.blue, 
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16, // Ukuran font disesuaikan agar lebih jelas
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
