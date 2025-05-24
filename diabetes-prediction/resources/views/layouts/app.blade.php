@@ -48,7 +48,7 @@
         @include('layouts.sidebar')
 
         <div class="flex-1 flex flex-col overflow-hidden bg-content-bg">
-            <header class="sticky top-0 z-30 bg-white border-b border-gray-200"> {{-- Naikkan z-index header --}}
+            <header class="sticky top-0 z-30 bg-white border-b border-gray-200">
                 <div class="flex items-center justify-between px-6 h-20">
                     <div class="flex items-center">
                         <button id="toggleSidebar" class="lg:hidden mr-4 p-2 rounded-full text-gray-600 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500">
@@ -59,35 +59,55 @@
                         </button>
                         <div>
                             <h1 class="text-xl font-semibold text-gray-800">@yield('page-title', 'Dashboard')</h1>
-                            {{-- <p class="text-sm text-gray-500">Selamat datang kembali!</p> --}}
                         </div>
                     </div>
                     <div class="flex items-center space-x-3 sm:space-x-5">
-                        {{-- Contoh Tombol (sesuaikan) --}}
-                        {{-- <button class="hidden sm:block text-sm text-gray-600 hover:text-sidebar-purple font-medium">
-                            Riwayat Janji Temu
-                        </button> --}}
                         <a href="{{ route('admin.pasien.create') }}" class="hidden sm:flex items-center gap-2 px-4 py-2 bg-sidebar-purple text-white rounded-lg text-sm font-medium hover:bg-opacity-90 transition-colors">
                             <i class="ri-add-line"></i>
                             Tambah Pasien
                         </a>
-                        <!-- <button class="relative p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors focus:outline-none">
-                            <span class="sr-only">Lihat Notifikasi</span>
-                            <i class="ri-notification-3-line text-xl"></i>
-                            <span class="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-1 ring-white"></span>
-                        </button> -->
 
-                        {{-- Profil Pengguna - Dibuat menjadi link atau dropdown --}}
+                        {{-- AWAL BLOK PROFIL PENGGUNA YANG DIRAPIKAN --}}
                         <div class="relative" x-data="{ open: false }">
                             <button @click="open = !open" class="flex items-center gap-2 focus:outline-none">
+                                {{-- Area Avatar (Foto atau Inisial) --}}
                                 <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden border border-gray-300">
-                                    <span class="font-semibold text-sm text-sidebar-purple">{{ substr(Auth::user()->name ?? 'DR', 0, 2) }}</span>
+                                    @php
+                                        $namaKolomFoto = 'avatar_url'; // Nama kolom sudah disesuaikan
+                                        $user = Auth::user();
+                                        $pathFotoDariUser = null;
+                                        $urlGambarFinalUntukSrc = null;
+
+                                        if ($user && isset($user->{$namaKolomFoto}) && !empty(trim($user->{$namaKolomFoto}))) {
+                                            $pathFotoDariUser = trim($user->{$namaKolomFoto});
+
+                                            if (strpos($pathFotoDariUser, 'http://') === 0 || strpos($pathFotoDariUser, 'https://') === 0) {
+                                                $urlGambarFinalUntukSrc = $pathFotoDariUser;
+                                            } elseif (strpos($pathFotoDariUser, '/storage/') === 0) {
+                                                $urlGambarFinalUntukSrc = asset($pathFotoDariUser);
+                                            } else {
+                                                $urlGambarFinalUntukSrc = asset('storage/' . $pathFotoDariUser);
+                                            }
+                                        }
+                                    @endphp
+
+                                    @if ($user && $pathFotoDariUser && $urlGambarFinalUntukSrc)
+                                        {{-- Jika semua kondisi terpenuhi, tampilkan gambar --}}
+                                        {{-- Teks debug visual "FOTO" dihilangkan untuk tampilan bersih --}}
+                                        <img src="{{ $urlGambarFinalUntukSrc }}" alt="{{ $user->name }}" class="w-full h-full object-cover">
+                                    @else
+                                        {{-- Jika tidak, tampilkan inisial --}}
+                                        {{-- Teks debug visual "INISIAL" dihilangkan untuk tampilan bersih --}}
+                                        <span class="font-semibold text-sm text-sidebar-purple">{{ substr(Auth::user()->name ?? 'DR', 0, 2) }}</span>
+                                    @endif
                                 </div>
+                                {{-- Nama Pengguna dan Ikon Panah --}}
                                 <div class="hidden md:block text-left">
                                     <span class="font-medium text-sm text-gray-700">{{ Auth::user()->name ?? 'Dokter' }}</span>
                                     <i class="ri-arrow-down-s-line text-xs text-gray-500"></i>
                                 </div>
                             </button>
+
                             {{-- Dropdown Menu --}}
                             <div x-show="open" @click.away="open = false"
                                  x-transition:enter="transition ease-out duration-100"
@@ -101,9 +121,6 @@
                                 <a href="{{ route('admin.profile.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                     <i class="ri-user-line mr-2"></i>Profil Saya
                                 </a>
-                                {{-- <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                    <i class="ri-settings-3-line mr-2"></i>Pengaturan
-                                </a> --}}
                                 <div class="border-t border-gray-100 my-1"></div>
                                 <form method="POST" action="{{ route('logout') }}" class="w-full">
                                     @csrf
@@ -113,6 +130,7 @@
                                 </form>
                             </div>
                         </div>
+                        {{-- AKHIR BLOK PROFIL PENGGUNA YANG DIRAPIKAN --}}
                     </div>
                 </div>
             </header>
@@ -125,23 +143,21 @@
         </div>
     </div>
 
-    {{-- Alpine.js (jika belum ada di layout utama Anda) --}}
+    {{-- Alpine.js --}}
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
+    {{-- JavaScript Anda --}}
     <script>
-        // Kode JavaScript untuk toggle sidebar mobile dan menu aktif
         document.addEventListener('DOMContentLoaded', function() {
+            // ... (sisa kode JavaScript Anda tetap sama) ...
             const sidebar = document.getElementById('sidebar');
-            const toggleSidebarBtn = document.getElementById('toggleSidebar'); // Tombol hamburger di header
-            const toggleExpandSidebarBtn = document.getElementById('toggleExpandSidebar'); // Tombol expand di sidebar
+            const toggleSidebarBtn = document.getElementById('toggleSidebar');
+            // const toggleExpandSidebarBtn = document.getElementById('toggleExpandSidebar'); // Anda mungkin menggunakan ini
 
-            // Fungsi untuk toggle sidebar mobile
             if (sidebar && toggleSidebarBtn) {
                 toggleSidebarBtn.addEventListener('click', function() {
                     sidebar.classList.toggle('-translate-x-full');
                 });
-
-                // Tutup sidebar saat klik di luar (mobile)
                 document.addEventListener('click', function(event) {
                     if (window.innerWidth < 1024 && !sidebar.classList.contains('-translate-x-full') && !sidebar.contains(event.target) && !toggleSidebarBtn.contains(event.target)) {
                         sidebar.classList.add('-translate-x-full');
@@ -149,7 +165,6 @@
                 });
             }
 
-            // Fungsi menandai menu aktif
             const currentPath = window.location.pathname;
             if (sidebar) {
                 const menuLinks = sidebar.querySelectorAll('nav a.menu-item');
@@ -157,30 +172,23 @@
                     const linkUrl = new URL(link.href, window.location.origin);
                     const isLogoutForm = link.closest('form') && link.closest('form').action.includes('logout');
                     let isActive = false;
-
-                    // Hapus kelas aktif dan reset ikon
                     link.classList.remove('bg-white/20', 'text-white', 'bg-red-500/50');
                     link.classList.add('text-white/80', 'hover:bg-white/10');
                     if (isLogoutForm) {
                         link.classList.remove('hover:bg-white/10');
                         link.classList.add('hover:bg-red-500/30');
                     }
-
                     const icon = link.querySelector('i');
                     if (icon && icon.className.includes('-fill')) {
                         icon.className = icon.className.replace('-fill', '-line');
                     }
-
-                    // Logika penentuan aktif
-                    if (linkUrl.pathname === "/" && currentPath === "/") { // Khusus untuk link root landing
-                         // Tidak menandai aktif di admin
+                    if (linkUrl.pathname === "/" && currentPath === "/") {
+                        //
                     } else if (linkUrl.pathname !== "/" && currentPath.startsWith(linkUrl.pathname)) {
                         isActive = true;
-                    } else if (linkUrl.pathname === currentPath) { // Untuk link yang sama persis
-                         isActive = true;
+                    } else if (linkUrl.pathname === currentPath) {
+                        isActive = true;
                     }
-
-
                     if (isActive) {
                         if (!isLogoutForm) {
                             link.classList.add('bg-white/20', 'text-white');
@@ -188,9 +196,6 @@
                             if (icon && icon.className.includes('-line')) {
                                 icon.className = icon.className.replace('-line', '-fill');
                             }
-                        } else { // Untuk tombol logout jika ingin styling khusus saat aktif (biasanya tidak perlu)
-                            // link.classList.add('bg-red-600/50', 'text-white');
-                            // link.classList.remove('text-white/80', 'hover:bg-red-500/30');
                         }
                     }
                 });
