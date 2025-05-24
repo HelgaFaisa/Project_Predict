@@ -1,3 +1,5 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_predic/model/ProfileEdit.dart';
 import 'splashscreen_page.dart'; // Import SplashScreen Anda
@@ -40,13 +42,16 @@ class MyApp extends StatelessWidget {
         // Rute untuk LoginPage
         '/login': (context) => LoginPage(),
         // Rute untuk HomePage.
-        // Catatan: Karena HomePage memerlukan 'userName' yang didapat setelah login,
+        // Catatan: Karena HomePage memerlukan 'userName' dan 'patientId' yang didapat setelah login,
         // navigasi dari LoginPage ke HomePage sebaiknya menggunakan MaterialPageRoute
         // seperti yang ditunjukkan di LoginPage.dart, BUKAN named route '/home' ini
-        // jika Anda ingin melewatkan userName dari proses login.
+        // jika Anda ingin melewatkan userName dan patientId dari proses login.
         // Rute '/home' ini bisa digunakan untuk navigasi lain ke HomePage
-        // jika userName bisa didapatkan dengan cara lain (misal dari SharedPreferences).
-        '/home': (context) => HomePage(userName: 'Pengguna Default'), // Ganti dengan logika ambil nama jika pakai rute ini
+        // jika userName dan patientId bisa didapatkan dengan cara lain (misal dari SharedPreferences).
+        '/home': (context) => HomePage(
+          userName: 'Pengguna Default',
+          patientId: 'default_patient_id', // <--- Tambahkan ini dengan ID placeholder
+        ),
         // Rute untuk halaman-halaman lain
         '/riwayat': (context) => RiwayatPage(),
         '/edukasi': (context) => EdukasiPage(),
@@ -61,7 +66,7 @@ class MyApp extends StatelessWidget {
 
 // Pastikan definisi widget SplashScreenPage ada di file splashscreen_page.dart
 // Pastikan definisi widget LoginPage ada di file logindokter/login.dart
-// Pastikan definisi widget HomePage (yang menerima userName) ada di file home_page.dart
+// Pastikan definisi widget HomePage (yang menerima userName dan patientId) ada di file home_page.dart
 // Pastikan definisi widget RiwayatPage, EdukasiPage, GejalaPage, dll. ada di file masing-masing
 // Pastikan kelas LoginApi, RiwayatApi, EdukasiApi, GejalaApi ada di file masing-masing
 // Pastikan model Gejala ada di file model/gejala.dart

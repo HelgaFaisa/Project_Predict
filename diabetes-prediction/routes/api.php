@@ -29,6 +29,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // Replace the GejalaController with GejalaApiController for API endpoints
 Route::get('/gejala', [GejalaApiController::class, 'index']);
+    // Route::get('/patient_health_data', [PatientHealthController::class, 'index']);
 
 // Keep the rest of your routes
 Route::post('/gejala', [GejalaController::class, 'store']);
@@ -49,6 +50,8 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/my-data', [PatientController::class, 'myData']);
     Route::get('/riwayat/{id}', [PatientController::class, 'riwayat']);
+        Route::get('/patient_health_data', [PatientController::class, 'myData']); // <-- Arahkan ke PatientController@myData
+
     // Rute untuk mendapatkan riwayat pengguna yang sedang login
     Route::get('/patient/prediction-history', [PredictionHistoryApiController::class, 'getCurrentUserHistory']);
 });
