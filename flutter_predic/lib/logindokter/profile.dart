@@ -1,313 +1,410 @@
-// import 'package:flutter/material.dart';
-// import '../api/profile_api.dart';
-// import '../riwayatpemeriksaan/riwayat.dart';
+// lib/profile/profile_page.dart - VERSI DENGAN DATA DINAMIS
 
-// class ProfilePage extends StatefulWidget {
-//   final String idPasien;
-//   final String token;
-  
-//   const ProfilePage({required this.idPasien, required this.token});
-  
-//   @override
-//   _ProfilePageState createState() => _ProfilePageState();
-// }
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// class _ProfilePageState extends State<ProfilePage> {
-//   Map<String, dynamic>? profileData;
-//   bool isLoading = true;
-//   String errorMessage = '';
-  
-//   @override
-//   void initState() {
-//     super.initState();
-//     fetchProfile();
-//   }
-  
-//   Future<void> fetchProfile() async {
-//   try {
-//     // Tambahkan logging untuk debugging
-//     print('Memulai fetch profile untuk ID: ${widget.idPasien}');
-//     print('Token digunakan: ${widget.token.substring(0, min(10, widget.token.length))}...');
-    
-//     // Test endpoint API terlebih dahulu
-//     final bool isApiAvailable = await ProfileApi.testEndpoint();
-//     if (!isApiAvailable) {
-//       print('API endpoint test gagal. Mungkin server tidak aktif atau ada masalah jaringan.');
-//     }
-    
-//     // Perhatikan bahwa ID pasien tidak diperlukan lagi untuk endpoint /patient/profile
-//     // karena endpoint tersebut sudah menggunakan token untuk mengidentifikasi pasien
-//     final data = await ProfileApi.getProfile(widget.idPasien, widget.token);
-    
-//     // Verifikasi struktur data yang diterima
-//     print('Data profil diterima: $data');
-    
-//     setState(() {
-//       profileData = data;
-//       isLoading = false;
-//     });
-//   } catch (e) {
-//     // handling error tetap sama
-//   }
-// }
-//   void logout() {
-//     // Konfirmasi logout dengan dialog
-//     showDialog(
-//       context: context,
-//       builder: (context) => AlertDialog(
-//         title: Text('Konfirmasi'),
-//         content: Text('Apakah Anda yakin ingin keluar?'),
-//         actions: [
-//           TextButton(
-//             onPressed: () => Navigator.pop(context),
-//             child: Text('Batal'),
-//           ),
-//           TextButton(
-//             onPressed: () {
-//               Navigator.pop(context); // tutup dialog
-//               // Clear any stored credentials and navigate back to login
-//               Navigator.pushReplacementNamed(context, '/login');
-//             },
-//             child: Text('Keluar', style: TextStyle(color: Colors.red)),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-  
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: Text('Profil Pasien'),
-//         backgroundColor: Colors.blue,
-//         elevation: 0,
-//         actions: [
-//           IconButton(
-//             icon: Icon(Icons.refresh),
-//             onPressed: () {
-//               setState(() {
-//                 isLoading = true;
-//                 errorMessage = '';
-//               });
-//               fetchProfile();
-//             },
-//             tooltip: 'Refresh',
-//           ),
-//           IconButton(
-//             icon: Icon(Icons.logout),
-//             onPressed: logout,
-//             tooltip: 'Logout',
-//           ),
-//         ],
-//       ),
-//       body: isLoading 
-//           ? Center(
-//               child: Column(
-//                 mainAxisAlignment: MainAxisAlignment.center,
-//                 children: [
-//                   CircularProgressIndicator(),
-//                   SizedBox(height: 16),
-//                   Text('Memuat data profil...'),
-//                 ],
-//               ),
-//             )
-//           : errorMessage.isNotEmpty 
-//               ? Center(
-//                   child: Column(
-//                     mainAxisAlignment: MainAxisAlignment.center,
-//                     children: [
-//                       Icon(Icons.error_outline, color: Colors.red, size: 60),
-//                       SizedBox(height: 16),
-//                       Text(
-//                         'Terjadi Kesalahan',
-//                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-//                       ),
-//                       SizedBox(height: 8),
-//                       Padding(
-//                         padding: const EdgeInsets.symmetric(horizontal: 24.0),
-//                         child: Text(
-//                           errorMessage,
-//                           textAlign: TextAlign.center,
-//                           style: TextStyle(color: Colors.red),
-//                         ),
-//                       ),
-//                       SizedBox(height: 24),
-//                       ElevatedButton.icon(
-//                         icon: Icon(Icons.refresh),
-//                         label: Text('Coba Lagi'),
-//                         onPressed: () {
-//                           setState(() {
-//                             isLoading = true;
-//                             errorMessage = '';
-//                           });
-//                           fetchProfile();
-//                         },
-//                       ),
-//                       SizedBox(height: 12),
-//                       // Tambah tombol untuk kembali ke login
-//                       TextButton(
-//                         onPressed: () {
-//                           Navigator.pushReplacementNamed(context, '/login');
-//                         },
-//                         child: Text('Kembali ke Login'),
-//                       ),
-//                     ],
-//                   ),
-//                 )
-//               : profileData == null 
-//                   ? Center(child: Text('Data tidak ditemukan'))
-//                   : Padding(
-//                       padding: const EdgeInsets.all(16.0),
-//                       child: Column(
-//                         crossAxisAlignment: CrossAxisAlignment.start,
-//                         children: [
-//                           // Info ID Pasien untuk debugging
-//                           Padding(
-//                             padding: const EdgeInsets.only(bottom: 16.0),
-//                             child: Card(
-//                               color: Colors.blue.shade50,
-//                               child: Padding(
-//                                 padding: const EdgeInsets.all(8.0),
-//                                 child: Row(
-//                                   children: [
-//                                     Icon(Icons.info_outline, color: Colors.blue),
-//                                     SizedBox(width: 8),
-//                                     Expanded(
-//                                       child: Text(
-//                                         'ID Pasien: ${widget.idPasien}',
-//                                         style: TextStyle(
-//                                           fontWeight: FontWeight.bold,
-//                                           color: Colors.blue.shade800,
-//                                         ),
-//                                       ),
-//                                     ),
-//                                   ],
-//                                 ),
-//                               ),
-//                             ),
-//                           ),
-                          
-//                           Center(
-//                             child: CircleAvatar(
-//                               radius: 50,
-//                               backgroundColor: Colors.blue.shade100,
-//                               child: Icon(
-//                                 Icons.person,
-//                                 size: 50,
-//                                 color: Colors.blue,
-//                               ),
-//                             ),
-//                           ),
-//                           SizedBox(height: 24),
-//                           ProfileInfoCard(
-//                             title: 'Informasi Pasien',
-//                             items: [
-//                               ProfileItem(title: 'Nama', value: profileData!['name'] ?? 'N/A'),
-//                               ProfileItem(title: 'Email', value: profileData!['email'] ?? 'N/A'),
-//                               ProfileItem(title: 'No. Telepon', value: profileData!['phone_number'] ?? 'N/A'),
-//                               ProfileItem(title: 'Status', value: profileData!['status'] ?? 'N/A'),
-//                             ],
-//                           ),
-//                           SizedBox(height: 24),
-//                           Center(
-//                             child: ElevatedButton.icon(
-//                               icon: Icon(Icons.history),
-//                               label: Text('Lihat Riwayat Pemeriksaan'),
-//                               style: ElevatedButton.styleFrom(
-//                                 backgroundColor: Colors.blue,
-//                                 foregroundColor: Colors.white,
-//                                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-//                                 shape: RoundedRectangleBorder(
-//                                   borderRadius: BorderRadius.circular(8),
-//                                 ),
-//                               ),
-//                               onPressed: () {
-//                                 Navigator.push(
-//                                   context,
-//                                   MaterialPageRoute(
-//                                     builder: (_) => RiwayatPage(idPasien: widget.idPasien, token: widget.token),
-//                                   ),
-//                                 );
-//                               },
-//                             ),
-//                           ),
-//                         ],
-//                       ),
-//                     ),
-//     );
-//   }
-// }
+class ProfilePage extends StatefulWidget {
+  final String? userName;
+  final String? userRole;
+  final String? patientId;
 
-// // Helper function untuk min
-// int min(int a, int b) {
-//   return a < b ? a : b;
-// }
+  const ProfilePage({
+    Key? key,
+    this.userName,
+    this.userRole,
+    this.patientId,
+  }) : super(key: key);
 
-// class ProfileInfoCard extends StatelessWidget {
-//   final String title;
-//   final List<ProfileItem> items;
-  
-//   const ProfileInfoCard({
-//     required this.title,
-//     required this.items,
-//   });
-  
-//   @override
-//   Widget build(BuildContext context) {
-//     return Card(
-//       elevation: 2,
-//       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-//       child: Padding(
-//         padding: const EdgeInsets.all(16.0),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Text(
-//               title,
-//               style: TextStyle(
-//                 fontSize: 18,
-//                 fontWeight: FontWeight.bold,
-//                 color: Colors.blue.shade800,
-//               ),
-//             ),
-//             Divider(height: 24),
-//             ...items.map((item) => Padding(
-//               padding: const EdgeInsets.only(bottom: 12.0),
-//               child: Row(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   SizedBox(
-//                     width: 100,
-//                     child: Text(
-//                       '${item.title}:',
-//                       style: TextStyle(
-//                         color: Colors.grey.shade700,
-//                         fontWeight: FontWeight.w500,
-//                       ),
-//                     ),
-//                   ),
-//                   Expanded(
-//                     child: Text(
-//                       item.value,
-//                       style: TextStyle(
-//                         fontWeight: FontWeight.w500,
-//                       ),
-//                     ),
-//                   ),
-//                 ],
-//               ),
-//             )).toList(),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
+  @override
+  _ProfilePageState createState() => _ProfilePageState();
+}
 
-// class ProfileItem {
-//   final String title;
-//   final String value;
-  
-//   ProfileItem({required this.title, required this.value});
-// }
+class _ProfilePageState extends State<ProfilePage> {
+  String userName = 'Loading...';
+  String userRole = 'User';
+  String patientId = '';
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      
+      setState(() {
+        // Cek apakah data diterima dari parameter terlebih dahulu
+        userName = widget.userName ?? 
+                   prefs.getString('user_name') ?? 
+                   prefs.getString('patient_name') ?? 
+                   'Pengguna';
+        
+        userRole = widget.userRole ?? 
+                   prefs.getString('user_role') ?? 
+                   'Pasien';
+        
+        patientId = widget.patientId ?? 
+                    prefs.getString('patient_id') ?? 
+                    prefs.getString('user_id') ?? 
+                    '';
+        
+        isLoading = false;
+      });
+      
+      print('Loaded user data: $userName, $userRole, $patientId'); // Debug
+    } catch (e) {
+      print('Error loading user data: $e');
+      setState(() {
+        userName = 'Pengguna';
+        userRole = 'Pasien';
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.blue[50],
+      appBar: AppBar(
+        title: Text('Profil Saya'),
+        backgroundColor: Colors.blue[700],
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Header Profil
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.blue[700]!, Colors.blue[500]!],
+                      ),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(30),
+                        bottomRight: Radius.circular(30),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(20, 20, 20, 40),
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            radius: 50,
+                            backgroundColor: Colors.white,
+                            child: Icon(
+                              Icons.person,
+                              size: 60,
+                              color: Colors.blue[700],
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            userName,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            userRole,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white70,
+                            ),
+                          ),
+                          if (patientId.isNotEmpty)
+                            Text(
+                              'ID: $patientId',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white60,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  SizedBox(height: 20),
+                  
+                  // Menu Profil
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      children: [
+                        _buildProfileMenuItem(
+                          icon: Icons.person_outline,
+                          title: 'Edit Profil',
+                          subtitle: 'Ubah informasi pribadi',
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context, 
+                              '/edit-profile',
+                              arguments: {
+                                'userName': userName,
+                                'userRole': userRole,
+                                'patientId': patientId,
+                              },
+                            );
+                          },
+                        ),
+                        _buildProfileMenuItem(
+                          icon: Icons.lock_outline,
+                          title: 'Ubah Password',
+                          subtitle: 'Ganti kata sandi akun',
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context, 
+                              '/change-password',
+                              arguments: {
+                                'patientId': patientId,
+                              },
+                            );
+                          },
+                        ),
+                        _buildProfileMenuItem(
+                          icon: Icons.notifications,
+                          title: 'Notifikasi',
+                          subtitle: 'Atur preferensi notifikasi',
+                          onTap: () {
+                            _showNotificationSettings(context);
+                          },
+                        ),
+                        _buildProfileMenuItem(
+                          icon: Icons.help_outline,
+                          title: 'Bantuan',
+                          subtitle: 'FAQ dan dukungan',
+                          onTap: () {
+                            _showHelpDialog(context);
+                          },
+                        ),
+                        _buildProfileMenuItem(
+                          icon: Icons.info_outline,
+                          title: 'Tentang Aplikasi',
+                          subtitle: 'Versi dan informasi aplikasi',
+                          onTap: () {
+                            _showAboutDialog(context);
+                          },
+                        ),
+                        _buildProfileMenuItem(
+                          icon: Icons.logout,
+                          title: 'Keluar',
+                          subtitle: 'Logout dari aplikasi',
+                          onTap: () {
+                            _showLogoutDialog(context);
+                          },
+                          isLogout: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  SizedBox(height: 100), // Space untuk bottom navigation
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildProfileMenuItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    bool isLogout = false,
+  }) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        elevation: 2,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isLogout ? Colors.red[50] : Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: isLogout ? Colors.red[600] : Colors.blue[600],
+                    size: 24,
+                  ),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: isLogout ? Colors.red[700] : Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey[400],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showNotificationSettings(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Pengaturan Notifikasi'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SwitchListTile(
+              title: Text('Notifikasi Pemeriksaan'),
+              subtitle: Text('Pengingat jadwal pemeriksaan'),
+              value: true,
+              onChanged: (value) {
+                // Handle switch
+              },
+            ),
+            SwitchListTile(
+              title: Text('Notifikasi Obat'),
+              subtitle: Text('Pengingat minum obat'),
+              value: true,
+              onChanged: (value) {
+                // Handle switch
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showHelpDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Bantuan'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('FAQ:', style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 8),
+            Text('• Bagaimana cara menggunakan aplikasi?'),
+            Text('• Cara mengecek gula darah?'),
+            Text('• Cara mengatur target harian?'),
+            SizedBox(height: 16),
+            Text('Kontak Support:', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Email: support@diabetacare.com'),
+            Text('Telepon: 021-1234-5678'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Tentang DiabetaCare'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Versi: 1.0.0'),
+            SizedBox(height: 8),
+            Text('DiabetaCare adalah aplikasi untuk membantu monitoring kesehatan diabetes.'),
+            SizedBox(height: 8),
+            Text('Dikembangkan dengan ❤️ untuk kesehatan yang lebih baik.'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Konfirmasi Logout'),
+        content: Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              // Clear shared preferences saat logout
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+              
+              Navigator.pop(context); // Tutup dialog
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/login',
+                (route) => false,
+              );
+            },
+            child: Text('Keluar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+}

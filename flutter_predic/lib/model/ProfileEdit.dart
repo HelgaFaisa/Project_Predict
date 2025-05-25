@@ -1,135 +1,327 @@
-import 'package:flutter/material.dart';
+// // lib/profile/profile_page.dart - VERSI PERBAIKAN
 
-// Widget untuk Halaman Profil Pengguna
-// Halaman ini akan ditampilkan saat pengguna menekan ikon profil di ProfileHeader.
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+// import 'package:flutter/material.dart';
 
-  @override
-  Widget build(BuildContext context) {
-    // Scaffold memberikan struktur dasar halaman, seperti AppBar dan body.
-    return Scaffold(
-      // AppBar di bagian atas halaman
-      appBar: AppBar(
-        title: const Text('Profil Pengguna'), // Judul halaman di AppBar
-        backgroundColor: Colors.blue.shade700, // Warna latar belakang AppBar, disesuaikan dengan header
-        foregroundColor: Colors.white, // Warna teks dan ikon di AppBar
-        // Tombol kembali (back button) akan otomatis muncul karena menggunakan pushNamed
-      ),
-      // Body adalah area utama konten halaman
-      body: Padding(
-        padding: const EdgeInsets.all(24.0), // Memberikan padding di sekeliling konten
-        child: Center( // Memusatkan konten Column di tengah layar
-          child: SingleChildScrollView( // Memungkinkan konten untuk discroll jika melebihi tinggi layar
-            child: Column(
-              // Menata elemen-elemen di dalam Column secara vertikal
-              mainAxisAlignment: MainAxisAlignment.center, // Pusatkan item secara vertikal (jika tidak perlu discroll)
-              crossAxisAlignment: CrossAxisAlignment.center, // Pusatkan item secara horizontal
-              children: <Widget>[
-                // Bagian Foto Profil (Avatar yang lebih besar dari di header)
-                Container(
-                   decoration: BoxDecoration(
-                    shape: BoxShape.circle, // Bentuk lingkaran
-                    boxShadow: [ // Efek bayangan untuk avatar
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                   ),
-                   child: CircleAvatar(
-                      radius: 60, // Ukuran avatar lebih besar
-                      backgroundColor: Colors.blue.shade100, // Warna latar belakang avatar
-                      child: Icon(
-                         Icons.person, // Ikon orang
-                         size: 80, // Ukuran ikon di dalam avatar
-                         color: Colors.blue.shade900, // Warna ikon
-                      ),
-                      // Jika Anda memiliki gambar profil pengguna (dari internet atau lokal),
-                      // Anda bisa mengganti 'child' dengan:
-                      // backgroundImage: NetworkImage('URL_GAMBAR_PROFIL'),
-                      // atau
-                      // backgroundImage: AssetImage('path/to/your/image.png'),
-                   ),
-                ),
+// class ProfilePage extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       backgroundColor: Colors.blue[50],
+//       appBar: AppBar(
+//         title: Text('Profil Saya'),
+//         backgroundColor: Colors.blue[700],
+//         foregroundColor: Colors.white,
+//         elevation: 0,
+//       ),
+//       body: SingleChildScrollView(
+//         child: Column(
+//           children: [
+//             // Header Profil
+//             Container(
+//               width: double.infinity,
+//               decoration: BoxDecoration(
+//                 gradient: LinearGradient(
+//                   begin: Alignment.topCenter,
+//                   end: Alignment.bottomCenter,
+//                   colors: [Colors.blue[700]!, Colors.blue[500]!],
+//                 ),
+//                 borderRadius: BorderRadius.only(
+//                   bottomLeft: Radius.circular(30),
+//                   bottomRight: Radius.circular(30),
+//                 ),
+//               ),
+//               child: Padding(
+//                 padding: EdgeInsets.fromLTRB(20, 20, 20, 40),
+//                 child: Column(
+//                   children: [
+//                     CircleAvatar(
+//                       radius: 50,
+//                       backgroundColor: Colors.white,
+//                       child: Icon(
+//                         Icons.person,
+//                         size: 60,
+//                         color: Colors.blue[700],
+//                       ),
+//                     ),
+//                     SizedBox(height: 16),
+//                     Text(
+//                       'Dr. John Doe', // Ganti dengan nama dinamis
+//                       style: TextStyle(
+//                         fontSize: 24,
+//                         fontWeight: FontWeight.bold,
+//                         color: Colors.white,
+//                       ),
+//                     ),
+//                     Text(
+//                       'Dokter Spesialis',
+//                       style: TextStyle(
+//                         fontSize: 16,
+//                         color: Colors.white70,
+//                       ),
+//                     ),
+//                   ],
+//                 ),
+//               ),
+//             ),
+            
+//             SizedBox(height: 20),
+            
+//             // Menu Profil
+//             Padding(
+//               padding: EdgeInsets.symmetric(horizontal: 20),
+//               child: Column(
+//                 children: [
+//                   _buildProfileMenuItem(
+//                     icon: Icons.person_outline,
+//                     title: 'Edit Profil',
+//                     subtitle: 'Ubah informasi pribadi',
+//                     onTap: () {
+//                       // Navigasi ke halaman edit profil
+//                       Navigator.pushNamed(context, '/edit-profile');
+//                     },
+//                   ),
+//                   _buildProfileMenuItem(
+//                     icon: Icons.lock_outline,
+//                     title: 'Ubah Password',
+//                     subtitle: 'Ganti kata sandi akun',
+//                     onTap: () {
+//                       // Navigasi ke halaman ubah password
+//                       Navigator.pushNamed(context, '/change-password');
+//                     },
+//                   ),
+//                   _buildProfileMenuItem(
+//                     // PERBAIKAN: Ganti dengan icon yang ada
+//                     icon: Icons.notifications,
+//                     title: 'Notifikasi',
+//                     subtitle: 'Atur preferensi notifikasi',
+//                     onTap: () {
+//                       // Navigasi ke halaman pengaturan notifikasi
+//                       _showNotificationSettings(context);
+//                     },
+//                   ),
+//                   _buildProfileMenuItem(
+//                     icon: Icons.help_outline,
+//                     title: 'Bantuan',
+//                     subtitle: 'FAQ dan dukungan',
+//                     onTap: () {
+//                       // Navigasi ke halaman bantuan
+//                       _showHelpDialog(context);
+//                     },
+//                   ),
+//                   _buildProfileMenuItem(
+//                     icon: Icons.info_outline,
+//                     title: 'Tentang Aplikasi',
+//                     subtitle: 'Versi dan informasi aplikasi',
+//                     onTap: () {
+//                       _showAboutDialog(context);
+//                     },
+//                   ),
+//                   _buildProfileMenuItem(
+//                     icon: Icons.logout,
+//                     title: 'Keluar',
+//                     subtitle: 'Logout dari aplikasi',
+//                     onTap: () {
+//                       _showLogoutDialog(context);
+//                     },
+//                     isLogout: true,
+//                   ),
+//                 ],
+//               ),
+//             ),
+            
+//             SizedBox(height: 100), // Space untuk bottom navigation
+//           ],
+//         ),
+//       ),
+//     );
+//   }
 
-                const SizedBox(height: 24), // Jarak vertikal antara avatar dan nama
+//   Widget _buildProfileMenuItem({
+//     required IconData icon,
+//     required String title,
+//     required String subtitle,
+//     required VoidCallback onTap,
+//     bool isLogout = false,
+//   }) {
+//     return Container(
+//       margin: EdgeInsets.only(bottom: 12),
+//       child: Material(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(12),
+//         elevation: 2,
+//         child: InkWell(
+//           onTap: onTap,
+//           borderRadius: BorderRadius.circular(12),
+//           child: Padding(
+//             padding: EdgeInsets.all(16),
+//             child: Row(
+//               children: [
+//                 Container(
+//                   padding: EdgeInsets.all(12),
+//                   decoration: BoxDecoration(
+//                     color: isLogout ? Colors.red[50] : Colors.blue[50],
+//                     borderRadius: BorderRadius.circular(8),
+//                   ),
+//                   child: Icon(
+//                     icon,
+//                     color: isLogout ? Colors.red[600] : Colors.blue[600],
+//                     size: 24,
+//                   ),
+//                 ),
+//                 SizedBox(width: 16),
+//                 Expanded(
+//                   child: Column(
+//                     crossAxisAlignment: CrossAxisAlignment.start,
+//                     children: [
+//                       Text(
+//                         title,
+//                         style: TextStyle(
+//                           fontSize: 16,
+//                           fontWeight: FontWeight.w600,
+//                           color: isLogout ? Colors.red[700] : Colors.black87,
+//                         ),
+//                       ),
+//                       Text(
+//                         subtitle,
+//                         style: TextStyle(
+//                           fontSize: 14,
+//                           color: Colors.grey[600],
+//                         ),
+//                       ),
+//                     ],
+//                   ),
+//                 ),
+//                 Icon(
+//                   Icons.arrow_forward_ios,
+//                   size: 16,
+//                   color: Colors.grey[400],
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
 
-                // Bagian Nama Pengguna
-                const Text(
-                  'Nama Pengguna Lengkap', // Ganti dengan data nama pengguna sebenarnya
-                  style: TextStyle(
-                    fontSize: 28, // Ukuran font
-                    fontWeight: FontWeight.bold, // Ketebalan font
-                    color: Colors.blueGrey, // Warna teks
-                  ),
-                ),
+//   // PERBAIKAN: Tambahkan method untuk notifikasi
+//   void _showNotificationSettings(BuildContext context) {
+//     showDialog(
+//       context: context,
+//       builder: (context) => AlertDialog(
+//         title: Text('Pengaturan Notifikasi'),
+//         content: Column(
+//           mainAxisSize: MainAxisSize.min,
+//           children: [
+//             SwitchListTile(
+//               title: Text('Notifikasi Pemeriksaan'),
+//               subtitle: Text('Pengingat jadwal pemeriksaan'),
+//               value: true,
+//               onChanged: (value) {
+//                 // Handle switch
+//               },
+//             ),
+//             SwitchListTile(
+//               title: Text('Notifikasi Obat'),
+//               subtitle: Text('Pengingat minum obat'),
+//               value: true,
+//               onChanged: (value) {
+//                 // Handle switch
+//               },
+//             ),
+//           ],
+//         ),
+//         actions: [
+//           TextButton(
+//             onPressed: () => Navigator.pop(context),
+//             child: Text('Tutup'),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
 
-                const SizedBox(height: 8), // Jarak vertikal antara nama dan email
+//   // PERBAIKAN: Tambahkan method untuk bantuan
+//   void _showHelpDialog(BuildContext context) {
+//     showDialog(
+//       context: context,
+//       builder: (context) => AlertDialog(
+//         title: Text('Bantuan'),
+//         content: Column(
+//           mainAxisSize: MainAxisSize.min,
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Text('FAQ:', style: TextStyle(fontWeight: FontWeight.bold)),
+//             SizedBox(height: 8),
+//             Text('• Bagaimana cara menggunakan aplikasi?'),
+//             Text('• Cara mengecek gula darah?'),
+//             Text('• Cara mengatur target harian?'),
+//             SizedBox(height: 16),
+//             Text('Kontak Support:', style: TextStyle(fontWeight: FontWeight.bold)),
+//             Text('Email: support@diabetacare.com'),
+//             Text('Telepon: 021-1234-5678'),
+//           ],
+//         ),
+//         actions: [
+//           TextButton(
+//             onPressed: () => Navigator.pop(context),
+//             child: Text('Tutup'),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
 
-                // Bagian Email atau Informasi Kontak Lain
-                const Text(
-                  'email.pengguna@example.com', // Ganti dengan data email pengguna sebenarnya
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.blueGrey,
-                  ),
-                ),
+//   void _showAboutDialog(BuildContext context) {
+//     showDialog(
+//       context: context,
+//       builder: (context) => AlertDialog(
+//         title: Text('Tentang DiabetaCare'),
+//         content: Column(
+//           mainAxisSize: MainAxisSize.min,
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Text('Versi: 1.0.0'),
+//             SizedBox(height: 8),
+//             Text('DiabetaCare adalah aplikasi untuk membantu monitoring kesehatan diabetes.'),
+//             SizedBox(height: 8),
+//             Text('Dikembangkan dengan ❤️ untuk kesehatan yang lebih baik.'),
+//           ],
+//         ),
+//         actions: [
+//           TextButton(
+//             onPressed: () => Navigator.pop(context),
+//             child: Text('Tutup'),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
 
-                const SizedBox(height: 30), // Jarak vertikal yang lebih besar sebelum tombol
-
-                // Tombol untuk Aksi Utama (misalnya Edit Profil)
-                ElevatedButton(
-                  onPressed: () {
-                    // TODO: Tambahkan logika untuk navigasi ke halaman edit profil atau menampilkan dialog edit
-                    // Contoh sederhana: Menampilkan SnackBar saat tombol ditekan
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tombol Edit Profil Ditekan')),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15), // Padding tombol
-                    backgroundColor: Colors.blue, // Warna latar tombol
-                    foregroundColor: Colors.white, // Warna teks tombol
-                    shape: RoundedRectangleBorder( // Bentuk tombol dengan sudut membulat
-                       borderRadius: BorderRadius.circular(30),
-                    ),
-                     elevation: 5, // Ketinggian bayangan tombol
-                  ),
-                  child: const Text(
-                     'Edit Profil', // Teks tombol
-                     style: TextStyle(fontSize: 18), // Gaya teks tombol
-                  ),
-                ),
-
-                 const SizedBox(height: 16), // Jarak vertikal antara tombol edit dan tombol keluar
-
-                 // Tombol untuk Aksi Sekunder (misalnya Keluar/Logout)
-                TextButton(
-                  onPressed: () {
-                    // TODO: Tambahkan logika untuk proses keluar (logout)
-                    // Ini biasanya melibatkan menghapus token autentikasi dan navigasi ke halaman login.
-                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tombol Keluar Ditekan')),
-                    );
-                    // Contoh navigasi setelah logout (mengganti semua halaman di stack dengan halaman login):
-                    // Navigator.pushReplacementNamed(context, '/login');
-                  },
-                  style: TextButton.styleFrom(
-                     foregroundColor: Colors.redAccent, // Warna teks tombol keluar
-                  ),
-                  child: const Text(
-                    'Keluar', // Teks tombol
-                    style: TextStyle(fontSize: 16), // Gaya teks tombol
-                  ),
-                ),
-
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+//   void _showLogoutDialog(BuildContext context) {
+//     showDialog(
+//       context: context,
+//       builder: (context) => AlertDialog(
+//         title: Text('Konfirmasi Logout'),
+//         content: Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
+//         actions: [
+//           TextButton(
+//             onPressed: () => Navigator.pop(context),
+//             child: Text('Batal'),
+//           ),
+//           TextButton(
+//             onPressed: () {
+//               Navigator.pop(context); // Tutup dialog
+//               Navigator.pushNamedAndRemoveUntil(
+//                 context,
+//                 '/login',
+//                 (route) => false,
+//               );
+//             },
+//             child: Text('Keluar', style: TextStyle(color: Colors.red)),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
