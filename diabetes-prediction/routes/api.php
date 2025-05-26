@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\PredictionHistoryApiController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\ForgotPasswordController;
+use App\Http\Controllers\Api\TargetController;
 
 /*
 |--------------------------------------------------------------------------
@@ -66,3 +67,34 @@ Route::prefix('patient')->group(function () {
         Route::post('logout', [PatientAuthController::class, 'logout']);
     });
 });
+
+// Target/Habit Management Routes - MAIN ROUTES
+Route::prefix('targets')->group(function () {
+    // Habits CRUD
+    Route::get('/habits', [TargetController::class, 'getAllHabits']);
+    Route::get('/habits/{id}', [TargetController::class, 'getHabitById']);
+    Route::post('/habits', [TargetController::class, 'createHabit']);
+    Route::put('/habits/{id}', [TargetController::class, 'updateHabit']);
+    Route::delete('/habits/{id}', [TargetController::class, 'deleteHabit']);
+    
+    // Activities Management
+    Route::get('/activities/{date}', [TargetController::class, 'getActivitiesByDate']);
+    Route::post('/activities', [TargetController::class, 'createOrUpdateActivity']);
+    Route::delete('/activities/{id}', [TargetController::class, 'deleteActivity']);
+    
+    // Statistics
+    Route::get('/habits/{id}/stats', [TargetController::class, 'getHabitStats']);
+});
+
+// Alternative direct routes (jika diperlukan)
+Route::get('habits', [TargetController::class, 'getAllHabits']);
+Route::get('habits/{id}', [TargetController::class, 'getHabitById']);
+Route::post('habits', [TargetController::class, 'createHabit']);
+Route::put('habits/{id}', [TargetController::class, 'updateHabit']);
+Route::delete('habits/{id}', [TargetController::class, 'deleteHabit']);
+
+Route::get('activities/{date}', [TargetController::class, 'getActivitiesByDate']);
+Route::post('activities', [TargetController::class, 'createOrUpdateActivity']);
+Route::delete('activities/{id}', [TargetController::class, 'deleteActivity']);
+
+Route::get('habits/{id}/stats', [TargetController::class, 'getHabitStats']);

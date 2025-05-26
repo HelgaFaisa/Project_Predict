@@ -1,6 +1,11 @@
+// lib/target/targethidup.dart
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import '../model/habit.dart';
+import '../model/activity.dart';
+import '../target/api_service.dart';
 
 class TargetHidupSehatPage extends StatefulWidget {
   const TargetHidupSehatPage({Key? key}) : super(key: key);
@@ -10,412 +15,580 @@ class TargetHidupSehatPage extends StatefulWidget {
 }
 
 class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
-  // Variabel untuk kalender
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
-  CalendarFormat _calendarFormat = CalendarFormat.week;
+  CalendarFormat _calendarFormat = CalendarFormat.month;
   
-  // Map untuk menyimpan aktivitas per tanggal
-  final Map<DateTime, List<HealthActivity>> _activitiesByDate = {};
-  
-  // Controller untuk textfield
-  final TextEditingController _activityController = TextEditingController();
-  
+  List<Habit> _habits = [];
+  List<Activity> _todayActivities = [];
+  bool _isLoading = false;
+  bool _localeInitialized = false;
+
   @override
-  void dispose() {
-    _activityController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _initializeLocale();
   }
 
-  // Mendapatkan key tanggal untuk Map
-  DateTime _getDateKey(DateTime date) {
-    return DateTime(date.year, date.month, date.day);
-  }
-
-  // Mendapatkan aktivitas pada tanggal tertentu
-  List<HealthActivity> _getActivitiesForDay(DateTime day) {
-    final dateKey = _getDateKey(day);
-    return _activitiesByDate[dateKey] ?? [];
-  }
-
-  // Menambah aktivitas baru
-  void _addActivity(String activity) {
-    if (activity.trim().isEmpty) return;
-    
-    final dateKey = _getDateKey(_selectedDay);
-    if (_activitiesByDate[dateKey] == null) {
-      _activitiesByDate[dateKey] = [];
+  Future<void> _initializeLocale() async {
+    try {
+      await initializeDateFormatting('id_ID', null);
+      setState(() {
+        _localeInitialized = true;
+      });
+      _loadData();
+    } catch (e) {
+      setState(() {
+        _localeInitialized = true;
+      });
+      _loadData();
     }
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final habits = await ApiService.getHabits();
+      final activities = await ApiService.getActivitiesForDate(_selectedDay);
+      setState(() {
+        _habits = habits;
+        _todayActivities = activities;
+      });
+    } catch (e) {
+      _showError('Gagal memuat data: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadActivitiesForDate(DateTime date) async {
+    setState(() => _isLoading = true);
+    try {
+      final activities = await ApiService.getActivitiesForDate(date);
+      setState(() {
+        _todayActivities = activities;
+        _selectedDay = date;
+        _focusedDay = date;
+      });
+    } catch (e) {
+      _showError('Gagal memuat aktivitas untuk tanggal ini: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _toggleActivity(String habitId, bool isCompleted) async {
+    try {
+      final activity = Activity(
+        habitId: habitId,
+        date: _selectedDay,
+        isCompleted: isCompleted,
+      );
+      
+      await ApiService.createOrUpdateActivity(activity);
+      _showSuccess('Status aktivitas berhasil diperbarui');
+      _loadActivitiesForDate(_selectedDay);
+    } catch (e) {
+      _showError('Gagal memperbarui aktivitas: $e');
+    }
+  }
+
+  Future<void> _showAddHabitDialog() async {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
     
-    setState(() {
-      _activitiesByDate[dateKey]!.add(
-        HealthActivity(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: activity,
-          isCompleted: false,
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Tambah Habit Baru'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Judul Habit',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Deskripsi (Opsional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Batal'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              child: const Text('Simpan'),
+              onPressed: () async {
+                if (titleController.text.trim().isEmpty) {
+                  _showError('Judul habit tidak boleh kosong');
+                  return;
+                }
+                
+                try {
+                  final newHabit = Habit(
+                    title: titleController.text.trim(),
+                    description: descriptionController.text.trim().isEmpty 
+                        ? null 
+                        : descriptionController.text.trim(),
+                    category: 'regular_habit',
+                  );
+                  
+                  await ApiService.createHabit(newHabit);
+                  Navigator.of(context).pop();
+                  _showSuccess('Habit berhasil ditambahkan');
+                  _loadData();
+                } catch (e) {
+                  _showError('Gagal menambah habit: $e');
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showEditHabitDialog(Habit habit) async {
+    final titleController = TextEditingController(text: habit.title);
+    final descriptionController = TextEditingController(text: habit.description ?? '');
+    
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Edit Habit'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Judul Habit',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Deskripsi (Opsional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Hapus'),
+              onPressed: () async {
+                final confirm = await _showConfirmDialog('Hapus Habit', 'Apakah Anda yakin ingin menghapus habit ini?');
+                if (confirm) {
+                  try {
+                    await ApiService.deleteHabit(habit.id!);
+                    Navigator.of(context).pop();
+                    _showSuccess('Habit berhasil dihapus');
+                    _loadData();
+                  } catch (e) {
+                    _showError('Gagal menghapus habit: $e');
+                  }
+                }
+              },
+            ),
+            TextButton(
+              child: const Text('Batal'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              child: const Text('Simpan'),
+              onPressed: () async {
+                if (titleController.text.trim().isEmpty) {
+                  _showError('Judul habit tidak boleh kosong');
+                  return;
+                }
+                
+                try {
+                  final updatedHabit = habit.copyWith(
+                    title: titleController.text.trim(),
+                    description: descriptionController.text.trim().isEmpty 
+                        ? null 
+                        : descriptionController.text.trim(),
+                  );
+                  
+                  await ApiService.updateHabit(updatedHabit);
+                  Navigator.of(context).pop();
+                  _showSuccess('Habit berhasil diperbarui');
+                  _loadData();
+                } catch (e) {
+                  _showError('Gagal memperbarui habit: $e');
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<bool> _showConfirmDialog(String title, String message) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Batal'),
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+            ),
+            ElevatedButton(
+              child: const Text('Ya'),
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+            ),
+          ],
+        );
+      },
+    ) ?? false;
+  }
+
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
         ),
       );
-      _activityController.clear();
-    });
-  }
-
-  // Toggle status aktivitas (selesai/belum)
-  void _toggleActivityStatus(String activityId) {
-    final dateKey = _getDateKey(_selectedDay);
-    final activities = _activitiesByDate[dateKey];
-    
-    if (activities != null) {
-      setState(() {
-        final activityIndex = activities.indexWhere((act) => act.id == activityId);
-        if (activityIndex != -1) {
-          activities[activityIndex] = activities[activityIndex].copyWith(
-            isCompleted: !activities[activityIndex].isCompleted,
-          );
-        }
-      });
     }
   }
 
-  // Menghapus aktivitas
-  void _deleteActivity(String activityId) {
-    final dateKey = _getDateKey(_selectedDay);
-    final activities = _activitiesByDate[dateKey];
-    
-    if (activities != null) {
-      setState(() {
-        _activitiesByDate[dateKey] = activities.where((act) => act.id != activityId).toList();
-      });
+  void _showSuccess(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
+  }
+
+  bool _isActivityCompleted(String habitId) {
+    return _todayActivities.any((activity) => 
+        activity.habitId == habitId && activity.isCompleted);
   }
 
   @override
   Widget build(BuildContext context) {
-    final selectedActivities = _getActivitiesForDay(_selectedDay);
-    final completedCount = selectedActivities.where((act) => act.isCompleted).length;
-    final totalActivities = selectedActivities.length;
-    final progressPercentage = totalActivities > 0 ? completedCount / totalActivities : 0.0;
-    
+    if (!_localeInitialized) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.blue[900]!,
-              Colors.blue[400]!,
-              Colors.blue[100]!,
-            ],
+      appBar: AppBar(
+        title: const Text('Target Hidup Sehat'),
+        backgroundColor: Colors.green[600],
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _showAddHabitDialog,
+            tooltip: 'Tambah Habit Baru',
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Target Hidup Sehat',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              
-              // Calendar
-              Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16.0),
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: TableCalendar(
-                    firstDay: DateTime.utc(2020, 1, 1),
-                    lastDay: DateTime.utc(2030, 12, 31),
-                    focusedDay: _focusedDay,
-                    selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                    calendarFormat: _calendarFormat,
-                    startingDayOfWeek: StartingDayOfWeek.monday,
-                    calendarStyle: CalendarStyle(
-                      selectedDecoration: BoxDecoration(
-                        color: Colors.blue[900],
-                        shape: BoxShape.circle,
-                      ),
-                      todayDecoration: BoxDecoration(
-                        color: Colors.blue[400],
-                        shape: BoxShape.circle,
-                      ),
-                      markersMaxCount: 3,
-                    ),
-                    headerStyle: HeaderStyle(
-                      formatButtonVisible: true,
-                      titleCentered: true,
-                      formatButtonShowsNext: false,
-                      formatButtonDecoration: BoxDecoration(
-                        color: Colors.blue[700],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      formatButtonTextStyle: const TextStyle(color: Colors.white),
-                    ),
-                    eventLoader: _getActivitiesForDay,
-                    onDaySelected: (selectedDay, focusedDay) {
-                      setState(() {
-                        _selectedDay = selectedDay;
-                        _focusedDay = focusedDay;
-                      });
-                    },
-                    onFormatChanged: (format) {
-                      setState(() {
-                        _calendarFormat = format;
-                      });
-                    },
-                  ),
-                ),
-              ),
-              
-              // Selected Date Display
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Kegiatan untuk ${DateFormat('dd MMMM yyyy').format(_selectedDay)}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              
-              // Progress Bar
-              if (totalActivities > 0)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Progress: $completedCount/$totalActivities',
-                            style: TextStyle(
-                              color: Colors.blue[700],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '${(progressPercentage * 100).toStringAsFixed(0)}%',
-                            style: TextStyle(
-                              color: Colors.blue[700],
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: LinearProgressIndicator(
-                          value: progressPercentage,
-                          backgroundColor: Colors.blue[100],
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[700]!),
-                          minHeight: 10,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              
-              // Activity Input Field
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _activityController,
-                        decoration: InputDecoration(
-                          hintText: 'Tambahkan kegiatan baru...',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.blue[700]!, Colors.blue[900]!],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: IconButton(
-                        onPressed: () => _addActivity(_activityController.text),
-                        icon: const Icon(Icons.add, color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Activities List
-              Expanded(
-                child: selectedActivities.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.fact_check_outlined,
-                              size: 60,
-                              color: Colors.blue[100],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Belum ada kegiatan untuk hari ini',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Tambahkan kegiatan untuk memulai',
-                              style: TextStyle(
-                                color: Colors.blue[100],
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: selectedActivities.length,
-                        itemBuilder: (context, index) {
-                          final activity = selectedActivities[index];
-                          return ActivityCard(
-                            activity: activity,
-                            onToggle: () => _toggleActivityStatus(activity.id),
-                            onDelete: () => _deleteActivity(activity.id),
-                          );
-                        },
-                      ),
-              ),
-            ],
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadData,
+            tooltip: 'Refresh Data',
           ),
-        ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                _buildCalendar(),
+                _buildSelectedDateInfo(),
+                Expanded(child: _buildHabitsList()),
+              ],
+            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddHabitDialog,
+        backgroundColor: Colors.green[600],
+        child: const Icon(Icons.add, color: Colors.white),
+        tooltip: 'Tambah Habit Baru',
       ),
     );
   }
-}
 
-// Widget untuk menampilkan kartu aktivitas
-class ActivityCard extends StatelessWidget {
-  final HealthActivity activity;
-  final VoidCallback onToggle;
-  final VoidCallback onDelete;
-
-  const ActivityCard({
-    Key? key,
-    required this.activity,
-    required this.onToggle,
-    required this.onDelete,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildCalendar() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue[900]!.withOpacity(0.15),
-            blurRadius: 10,
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 2,
+            blurRadius: 5,
             offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: InkWell(
-          onTap: onToggle,
-          child: Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: activity.isCompleted ? Colors.blue[600] : Colors.white,
-              border: Border.all(
-                color: activity.isCompleted ? Colors.blue[600]! : Colors.blue[300]!,
-                width: 2,
-              ),
-            ),
-            child: activity.isCompleted
-                ? const Icon(
-                    Icons.check,
-                    size: 16,
-                    color: Colors.white,
-                  )
-                : null,
+      child: TableCalendar<Activity>(
+        firstDay: DateTime.utc(2020, 1, 1),
+        lastDay: DateTime.utc(2030, 12, 31),
+        focusedDay: _focusedDay,
+        calendarFormat: _calendarFormat,
+        locale: 'id_ID',
+        selectedDayPredicate: (day) {
+          return isSameDay(_selectedDay, day);
+        },
+        onDaySelected: (selectedDay, focusedDay) {
+          if (!isSameDay(_selectedDay, selectedDay)) {
+            _loadActivitiesForDate(selectedDay);
+          }
+        },
+        onFormatChanged: (format) {
+          if (_calendarFormat != format) {
+            setState(() {
+              _calendarFormat = format;
+            });
+          }
+        },
+        onPageChanged: (focusedDay) {
+          _focusedDay = focusedDay;
+        },
+        calendarStyle: CalendarStyle(
+          todayDecoration: BoxDecoration(
+            color: Colors.green[400],
+            shape: BoxShape.circle,
+          ),
+          selectedDecoration: BoxDecoration(
+            color: Colors.green[600],
+            shape: BoxShape.circle,
+          ),
+          weekendTextStyle: TextStyle(
+            color: Colors.red[600],
           ),
         ),
-        title: Text(
-          activity.title,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            decoration: activity.isCompleted ? TextDecoration.lineThrough : null,
-            color: activity.isCompleted ? Colors.grey : Colors.black87,
+        headerStyle: const HeaderStyle(
+          formatButtonVisible: true,
+          titleCentered: true,
+          formatButtonShowsNext: false,
+          formatButtonDecoration: BoxDecoration(
+            color: Colors.green,
+            borderRadius: BorderRadius.all(Radius.circular(12.0)),
           ),
-        ),
-        trailing: IconButton(
-          icon: Icon(Icons.delete_outline, color: Colors.red[300]),
-          onPressed: onDelete,
+          formatButtonTextStyle: TextStyle(
+            color: Colors.white,
+          ),
         ),
       ),
     );
   }
-}
 
-// Model untuk aktivitas kesehatan
-class HealthActivity {
-  final String id;
-  final String title;
-  final bool isCompleted;
+  Widget _buildSelectedDateInfo() {
+    final dateFormat = DateFormat('EEEE, d MMMM yyyy', 'id_ID');
+    final completedCount = _todayActivities.where((a) => a.isCompleted).length;
+    final totalHabits = _habits.length;
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.green[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green[200]!),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  dateFormat.format(_selectedDay),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Progress: $completedCount/$totalHabits habit selesai',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          CircularProgressIndicator(
+            value: totalHabits > 0 ? completedCount / totalHabits : 0,
+            backgroundColor: Colors.grey[300],
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.green[600]!),
+          ),
+        ],
+      ),
+    );
+  }
 
-  HealthActivity({
-    required this.id,
-    required this.title,
-    required this.isCompleted,
-  });
+  Widget _buildHabitsList() {
+    if (_habits.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.task_alt,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Belum ada habit yang ditambahkan',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: _showAddHabitDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('Tambah Habit Pertama'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[600],
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
-  HealthActivity copyWith({
-    String? id,
-    String? title,
-    bool? isCompleted,
-  }) {
-    return HealthActivity(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      isCompleted: isCompleted ?? this.isCompleted,
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _habits.length,
+      itemBuilder: (context, index) {
+        final habit = _habits[index];
+        final isCompleted = _isActivityCompleted(habit.id!);
+        
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: isCompleted ? Colors.green : Colors.grey[300]!,
+              width: 1,
+            ),
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(16),
+            leading: Checkbox(
+              value: isCompleted,
+              onChanged: (bool? value) {
+                _toggleActivity(habit.id!, value ?? false);
+              },
+              activeColor: Colors.green[600],
+            ),
+            title: Text(
+              habit.title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                decoration: isCompleted ? TextDecoration.lineThrough : null,
+                color: isCompleted ? Colors.grey[600] : null,
+              ),
+            ),
+            subtitle: habit.description != null && habit.description!.isNotEmpty
+                ? Text(
+                    habit.description!,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      decoration: isCompleted ? TextDecoration.lineThrough : null,
+                    ),
+                  )
+                : null,
+            trailing: PopupMenuButton<String>(
+              onSelected: (String value) {
+                if (value == 'edit') {
+                  _showEditHabitDialog(habit);
+                } else if (value == 'delete') {
+                  _showConfirmDialog('Hapus Habit', 'Apakah Anda yakin ingin menghapus habit "${habit.title}"?')
+                      .then((confirmed) {
+                    if (confirmed) {
+                      ApiService.deleteHabit(habit.id!).then((_) {
+                        _showSuccess('Habit berhasil dihapus');
+                        _loadData();
+                      }).catchError((e) {
+                        _showError('Gagal menghapus habit: $e');
+                      });
+                    }
+                  });
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                const PopupMenuItem<String>(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, size: 20),
+                      SizedBox(width: 8),
+                      Text('Edit'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, size: 20, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Hapus', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
