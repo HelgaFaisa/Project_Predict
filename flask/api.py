@@ -5,7 +5,7 @@ import numpy as np
 app = Flask(__name__)
 
 # Load model dan scaler
-model = joblib.load('random_forest_model.pkl')
+model = joblib.load('best_random_forest_model.pkl')
 scaler = joblib.load('scaler.pkl')  # scaler hasil fit dari training
 
 @app.route('/predict', methods=['POST'])
