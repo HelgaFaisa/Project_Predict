@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import '../model/habit.dart';
 import '../model/activity.dart';
-import '../target/api_service.dart';
+import '../api/api_service.dart'; // Updated import path
 
 class TargetHidupSehatPage extends StatefulWidget {
   const TargetHidupSehatPage({Key? key}) : super(key: key);
@@ -19,8 +19,7 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
   DateTime _focusedDay = DateTime.now();
   CalendarFormat _calendarFormat = CalendarFormat.month;
   
-  List<Habit> _habits = [];
-  List<Activity> _todayActivities = [];
+  List<HabitWithStatus> _habitsWithStatus = [];
   bool _isLoading = false;
   bool _localeInitialized = false;
 
@@ -48,11 +47,10 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final habits = await ApiService.getHabits();
-      final activities = await ApiService.getActivitiesForDate(_selectedDay);
+      final selectedDateString = DateFormat('yyyy-MM-dd').format(_selectedDay);
+      final habitsWithStatus = await HabitService.getHabitsWithTodayStatus(selectedDateString);
       setState(() {
-        _habits = habits;
-        _todayActivities = activities;
+        _habitsWithStatus = habitsWithStatus;
       });
     } catch (e) {
       _showError('Gagal memuat data: $e');
@@ -61,37 +59,51 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
     }
   }
 
-  Future<void> _loadActivitiesForDate(DateTime date) async {
+  Future<void> _loadHabitsForDate(DateTime date) async {
     setState(() => _isLoading = true);
     try {
-      final activities = await ApiService.getActivitiesForDate(date);
+      final dateString = DateFormat('yyyy-MM-dd').format(date);
+      final habitsWithStatus = await HabitService.getHabitsWithTodayStatus(dateString);
       setState(() {
-        _todayActivities = activities;
+        _habitsWithStatus = habitsWithStatus;
         _selectedDay = date;
         _focusedDay = date;
       });
     } catch (e) {
-      _showError('Gagal memuat aktivitas untuk tanggal ini: $e');
+      _showError('Gagal memuat data untuk tanggal ini: $e');
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _toggleActivity(String habitId, bool isCompleted) async {
-    try {
-      final activity = Activity(
-        habitId: habitId,
-        date: _selectedDay,
-        isCompleted: isCompleted,
-      );
-      
-      await ApiService.createOrUpdateActivity(activity);
-      _showSuccess('Status aktivitas berhasil diperbarui');
-      _loadActivitiesForDate(_selectedDay);
-    } catch (e) {
-      _showError('Gagal memperbarui aktivitas: $e');
-    }
+  // Debug log
+  print('DEBUG: Attempting to toggle activity for habitId: "$habitId"');
+  
+  // Validasi habitId lebih ketat
+  if (habitId.isEmpty || habitId.trim().isEmpty) {
+    print('ERROR: habitId is empty or null');
+    _showError('Habit ID tidak valid. Silakan refresh halaman.');
+    return;
   }
+
+  try {
+    final activity = Activity(
+      habitId: habitId.trim(), // Pastikan tidak ada whitespace
+      date: _selectedDay,
+      isCompleted: isCompleted,
+    );
+    
+    print('DEBUG: Creating activity with habitId: "${activity.habitId}"');
+    
+    await HabitService.createOrUpdateActivity(activity);
+    _showSuccess('Status aktivitas berhasil diperbarui');
+    _loadHabitsForDate(_selectedDay);
+  } catch (e) {
+    print('ERROR: Failed to toggle activity: $e');
+    _showError('Gagal memperbarui aktivitas: $e');
+  }
+}
 
   Future<void> _showAddHabitDialog() async {
     final titleController = TextEditingController();
@@ -149,7 +161,7 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
                     category: 'regular_habit',
                   );
                   
-                  await ApiService.createHabit(newHabit);
+                  await HabitService.createHabit(newHabit);
                   Navigator.of(context).pop();
                   _showSuccess('Habit berhasil ditambahkan');
                   _loadData();
@@ -164,9 +176,9 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
     );
   }
 
-  Future<void> _showEditHabitDialog(Habit habit) async {
-    final titleController = TextEditingController(text: habit.title);
-    final descriptionController = TextEditingController(text: habit.description ?? '');
+  Future<void> _showEditHabitDialog(HabitWithStatus habitWithStatus) async {
+    final titleController = TextEditingController(text: habitWithStatus.title);
+    final descriptionController = TextEditingController(text: habitWithStatus.description ?? '');
     
     return showDialog<void>(
       context: context,
@@ -203,7 +215,7 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
                 final confirm = await _showConfirmDialog('Hapus Habit', 'Apakah Anda yakin ingin menghapus habit ini?');
                 if (confirm) {
                   try {
-                    await ApiService.deleteHabit(habit.id!);
+                    await HabitService.deleteHabit(habitWithStatus.habitId);
                     Navigator.of(context).pop();
                     _showSuccess('Habit berhasil dihapus');
                     _loadData();
@@ -228,14 +240,16 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
                 }
                 
                 try {
-                  final updatedHabit = habit.copyWith(
+                  final updatedHabit = Habit(
+                    id: habitWithStatus.habitId,
                     title: titleController.text.trim(),
                     description: descriptionController.text.trim().isEmpty 
                         ? null 
                         : descriptionController.text.trim(),
+                    category: habitWithStatus.category,
                   );
                   
-                  await ApiService.updateHabit(updatedHabit);
+                  await HabitService.updateHabit(habitWithStatus.habitId, updatedHabit);
                   Navigator.of(context).pop();
                   _showSuccess('Habit berhasil diperbarui');
                   _loadData();
@@ -300,11 +314,6 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
     }
   }
 
-  bool _isActivityCompleted(String habitId) {
-    return _todayActivities.any((activity) => 
-        activity.habitId == habitId && activity.isCompleted);
-  }
-
   @override
   Widget build(BuildContext context) {
     if (!_localeInitialized) {
@@ -335,12 +344,19 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                _buildCalendar(),
-                _buildSelectedDateInfo(),
-                Expanded(child: _buildHabitsList()),
-              ],
+          : SafeArea(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildCalendar(),
+                    _buildSelectedDateInfo(),
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.4, // Fixed height
+                      child: _buildHabitsList(),
+                    ),
+                  ],
+                ),
+              ),
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddHabitDialog,
@@ -366,7 +382,7 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
           ),
         ],
       ),
-      child: TableCalendar<Activity>(
+      child: TableCalendar<HabitWithStatus>(
         firstDay: DateTime.utc(2020, 1, 1),
         lastDay: DateTime.utc(2030, 12, 31),
         focusedDay: _focusedDay,
@@ -377,7 +393,7 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
         },
         onDaySelected: (selectedDay, focusedDay) {
           if (!isSameDay(_selectedDay, selectedDay)) {
-            _loadActivitiesForDate(selectedDay);
+            _loadHabitsForDate(selectedDay);
           }
         },
         onFormatChanged: (format) {
@@ -421,8 +437,8 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
 
   Widget _buildSelectedDateInfo() {
     final dateFormat = DateFormat('EEEE, d MMMM yyyy', 'id_ID');
-    final completedCount = _todayActivities.where((a) => a.isCompleted).length;
-    final totalHabits = _habits.length;
+    final completedCount = _habitsWithStatus.where((h) => h.isCompleted).length;
+    final totalHabits = _habitsWithStatus.length;
     
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -456,10 +472,15 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
               ],
             ),
           ),
-          CircularProgressIndicator(
-            value: totalHabits > 0 ? completedCount / totalHabits : 0,
-            backgroundColor: Colors.grey[300],
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.green[600]!),
+          const SizedBox(width: 16),
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: CircularProgressIndicator(
+              value: totalHabits > 0 ? completedCount / totalHabits : 0,
+              backgroundColor: Colors.grey[300],
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.green[600]!),
+            ),
           ),
         ],
       ),
@@ -467,7 +488,7 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
   }
 
   Widget _buildHabitsList() {
-    if (_habits.isEmpty) {
+    if (_habitsWithStatus.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -502,10 +523,10 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _habits.length,
+      itemCount: _habitsWithStatus.length,
       itemBuilder: (context, index) {
-        final habit = _habits[index];
-        final isCompleted = _isActivityCompleted(habit.id!);
+        final habitWithStatus = _habitsWithStatus[index];
+        final isCompleted = habitWithStatus.isCompleted;
         
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -522,12 +543,12 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
             leading: Checkbox(
               value: isCompleted,
               onChanged: (bool? value) {
-                _toggleActivity(habit.id!, value ?? false);
+                _toggleActivity(habitWithStatus.habitId, value ?? false);
               },
               activeColor: Colors.green[600],
             ),
             title: Text(
-              habit.title,
+              habitWithStatus.title,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -535,9 +556,9 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
                 color: isCompleted ? Colors.grey[600] : null,
               ),
             ),
-            subtitle: habit.description != null && habit.description!.isNotEmpty
+            subtitle: habitWithStatus.description != null && habitWithStatus.description!.isNotEmpty
                 ? Text(
-                    habit.description!,
+                    habitWithStatus.description!,
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[600],
@@ -548,12 +569,12 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
             trailing: PopupMenuButton<String>(
               onSelected: (String value) {
                 if (value == 'edit') {
-                  _showEditHabitDialog(habit);
+                  _showEditHabitDialog(habitWithStatus);
                 } else if (value == 'delete') {
-                  _showConfirmDialog('Hapus Habit', 'Apakah Anda yakin ingin menghapus habit "${habit.title}"?')
+                  _showConfirmDialog('Hapus Habit', 'Apakah Anda yakin ingin menghapus habit "${habitWithStatus.title}"?')
                       .then((confirmed) {
                     if (confirmed) {
-                      ApiService.deleteHabit(habit.id!).then((_) {
+                      HabitService.deleteHabit(habitWithStatus.habitId).then((_) {
                         _showSuccess('Habit berhasil dihapus');
                         _loadData();
                       }).catchError((e) {
@@ -561,6 +582,8 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
                       });
                     }
                   });
+                } else if (value == 'stats') {
+                  _showHabitStats(habitWithStatus);
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -571,6 +594,16 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
                       Icon(Icons.edit, size: 20),
                       SizedBox(width: 8),
                       Text('Edit'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'stats',
+                  child: Row(
+                    children: [
+                      Icon(Icons.analytics, size: 20, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('Statistik', style: TextStyle(color: Colors.blue)),
                     ],
                   ),
                 ),
@@ -589,6 +622,75 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _showHabitStats(HabitWithStatus habitWithStatus) async {
+    try {
+      setState(() => _isLoading = true);
+      final stats = await HabitService.getHabitStats(habitWithStatus.habitId);
+      
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Statistik: ${habitWithStatus.title}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildStatRow('Total Aktivitas', '${stats.totalActivities}'),
+                  _buildStatRow('Aktivitas Selesai', '${stats.completedActivities}'),
+                  _buildStatRow('Tingkat Penyelesaian', '${stats.completionRate.toStringAsFixed(1)}%'),
+                  _buildStatRow('Streak Saat Ini', '${stats.currentStreak} hari'),
+                  _buildStatRow('Streak Terpanjang', '${stats.longestStreak} hari'),
+                  const SizedBox(height: 16),
+                  LinearProgressIndicator(
+                    value: stats.completionRate / 100,
+                    backgroundColor: Colors.grey[300],
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.green[600]!),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Tutup'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      _showError('Gagal memuat statistik: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Widget _buildStatRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

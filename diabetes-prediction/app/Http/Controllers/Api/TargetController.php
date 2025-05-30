@@ -22,15 +22,22 @@ class TargetController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            // Transform data untuk frontend
+            // Transform data untuk frontend dengan pengecekan property
             $transformedHabits = $habits->map(function ($habit) {
+                // Convert stdClass to array untuk akses yang lebih aman
+                $habitArray = json_decode(json_encode($habit), true);
+                
                 return [
-                    '_id' => ['$oid' => (string) $habit->_id],
-                    'title' => $habit->title,
-                    'description' => $habit->description ?? null,
-                    'category' => $habit->category,
-                    'created_at' => isset($habit->created_at) ? ['$date' => $habit->created_at->toDateTime()->format('c')] : null,
-                    'updated_at' => isset($habit->updated_at) ? ['$date' => $habit->updated_at->toDateTime()->format('c')] : null,
+                    '_id' => ['$oid' => isset($habitArray['_id']) ? (string) $habitArray['_id'] : ''],
+                    'title' => $habitArray['title'] ?? '',
+                    'description' => $habitArray['description'] ?? null,
+                    'category' => $habitArray['category'] ?? 'regular_habit',
+                    'created_at' => isset($habitArray['created_at']) && $habitArray['created_at'] 
+                        ? ['$date' => $habitArray['created_at']] 
+                        : null,
+                    'updated_at' => isset($habitArray['updated_at']) && $habitArray['updated_at'] 
+                        ? ['$date' => $habitArray['updated_at']] 
+                        : null,
                 ];
             });
 
@@ -47,63 +54,6 @@ class TargetController extends Controller
             ], 500);
         }
     }
-
-// Ganti method getActivitiesByDate di TargetController.php dengan ini:
-
-public function getActivitiesByDate($date)
-{
-    try {
-        // Validasi format tanggal
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Format tanggal tidak valid. Gunakan format YYYY-MM-DD'
-            ], 400);
-        }
-
-        // Validasi apakah tanggal valid
-        $dateObj = \DateTime::createFromFormat('Y-m-d', $date);
-        if (!$dateObj || $dateObj->format('Y-m-d') !== $date) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Tanggal tidak valid'
-            ], 400);
-        }
-
-        Log::info("Mengambil aktivitas untuk tanggal: " . $date);
-
-        $activities = DB::connection('mongodb')
-            ->table('activities')
-            ->where('date', $date)
-            ->get();
-
-        Log::info("Ditemukan " . $activities->count() . " aktivitas untuk tanggal " . $date);
-
-        // Transform data untuk frontend
-        $transformedActivities = $activities->map(function ($activity) {
-            return [
-                '_id' => ['$oid' => (string) $activity->_id],
-                'habitId' => (string) $activity->habitId,
-                'date' => $activity->date,
-                'isCompleted' => $activity->isCompleted ?? false,
-                'created_at' => isset($activity->created_at) ? ['$date' => $activity->created_at->toDateTime()->format('c')] : null,
-                'updated_at' => isset($activity->updated_at) ? ['$date' => $activity->updated_at->toDateTime()->format('c')] : null,
-            ];
-        });
-
-        return response()->json([
-            'success' => true,
-            'data' => $transformedActivities,
-            'message' => 'Aktivitas berhasil diambil'
-        ]);
-    } catch (\Exception $e) {
-        Log::error('Gagal mengambil aktivitas: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
-        return response()->json([
-            'success' => false,
-            'message' => 'Gagal mengambil aktivitas: ' . $e->getMessage()
-        ], 500);
-    }
-}
 
     public function createHabit(Request $request)
     {
@@ -134,31 +84,270 @@ public function getActivitiesByDate($date)
                 ->table('targets')
                 ->insertGetId($habitData);
 
+            // **TAMBAHAN: Buat activity untuk hari ini secara otomatis**
+            $today = Carbon::today()->format('Y-m-d');
+            $activityData = [
+                'habitId' => (string) $habitId,
+                'date' => $today,
+                'isCompleted' => false,
+                'created_at' => new UTCDateTime(),
+                'updated_at' => new UTCDateTime()
+            ];
+
+            DB::connection('mongodb')
+                ->table('activities')
+                ->insert($activityData);
+
+            Log::info("Activity created for habit " . $habitId . " on date " . $today);
+
             // Get the created habit to return
             $createdHabit = DB::connection('mongodb')
                 ->table('targets')
                 ->where('_id', $habitId)
                 ->first();
 
+            // Convert to array untuk akses yang aman
+            $habitArray = json_decode(json_encode($createdHabit), true);
+
             $transformedHabit = [
-                '_id' => ['$oid' => (string) $createdHabit->_id],
-                'title' => $createdHabit->title,
-                'description' => $createdHabit->description ?? null,
-                'category' => $createdHabit->category,
-                'created_at' => ['$date' => $createdHabit->created_at->toDateTime()->format('c')],
-                'updated_at' => ['$date' => $createdHabit->updated_at->toDateTime()->format('c')],
+                '_id' => ['$oid' => isset($habitArray['_id']) ? (string) $habitArray['_id'] : (string) $habitId],
+                'title' => $habitArray['title'] ?? '',
+                'description' => $habitArray['description'] ?? null,
+                'category' => $habitArray['category'] ?? 'regular_habit',
+                'created_at' => isset($habitArray['created_at']) 
+                    ? ['$date' => $habitArray['created_at']] 
+                    : null,
+                'updated_at' => isset($habitArray['updated_at']) 
+                    ? ['$date' => $habitArray['updated_at']] 
+                    : null,
             ];
 
             return response()->json([
                 'success' => true,
                 'data' => $transformedHabit,
-                'message' => 'Habit berhasil dibuat'
+                'message' => 'Habit berhasil dibuat dan activity hari ini telah ditambahkan'
             ], 201);
         } catch (\Exception $e) {
             Log::error('Gagal membuat habit: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal membuat habit: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function generateDailyActivities($date = null)
+    {
+        try {
+            $targetDate = $date ?? Carbon::today()->format('Y-m-d');
+            
+            Log::info("Generating daily activities for date: " . $targetDate);
+
+            // Get all active habits
+            $habits = DB::connection('mongodb')
+                ->table('targets')
+                ->where('category', 'regular_habit')
+                ->get();
+
+            $createdCount = 0;
+
+            foreach ($habits as $habit) {
+                // Check if activity already exists for this date
+                $existingActivity = DB::connection('mongodb')
+                    ->table('activities')
+                    ->where('habitId', (string) $habit->_id)
+                    ->where('date', $targetDate)
+                    ->first();
+
+                if (!$existingActivity) {
+                    // Create new activity
+                    $activityData = [
+                        'habitId' => (string) $habit->_id,
+                        'date' => $targetDate,
+                        'isCompleted' => false,
+                        'created_at' => new UTCDateTime(),
+                        'updated_at' => new UTCDateTime()
+                    ];
+
+                    DB::connection('mongodb')
+                        ->table('activities')
+                        ->insert($activityData);
+
+                    $createdCount++;
+                    Log::info("Created activity for habit: " . $habit->title . " on " . $targetDate);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Generated {$createdCount} activities for {$targetDate}",
+                'data' => [
+                    'date' => $targetDate,
+                    'created_count' => $createdCount,
+                    'total_habits' => $habits->count()
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Gagal generate daily activities: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal generate daily activities: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getHabitsWithTodayStatus($date = null)
+{
+    try {
+        $targetDate = $date ?? Carbon::today()->format('Y-m-d');
+        
+        Log::info("Getting habits with status for date: " . $targetDate);
+
+        // Get habits dengan join ke activities
+        $habits = DB::connection('mongodb')
+            ->table('targets')
+            ->where('category', 'regular_habit')
+            ->get();
+
+        // Auto-generate activities untuk tanggal ini jika belum ada
+        foreach ($habits as $habit) {
+            // Convert habit to array untuk akses yang aman
+            $habitArray = json_decode(json_encode($habit), true);
+            $habitId = isset($habitArray['_id']) ? (string) $habitArray['_id'] : '';
+            
+            if ($habitId) {
+                $existingActivity = DB::connection('mongodb')
+                    ->table('activities')
+                    ->where('habitId', $habitId)
+                    ->where('date', $targetDate)
+                    ->first();
+
+                if (!$existingActivity) {
+                    DB::connection('mongodb')
+                        ->table('activities')
+                        ->insert([
+                            'habitId' => $habitId,
+                            'date' => $targetDate,
+                            'isCompleted' => false,
+                            'created_at' => new UTCDateTime(),
+                            'updated_at' => new UTCDateTime()
+                        ]);
+                }
+            }
+        }
+
+        // Get habits dengan status completion
+        $habitsWithStatus = $habits->map(function ($habit) use ($targetDate) {
+            // Convert to array untuk akses yang aman
+            $habitArray = json_decode(json_encode($habit), true);
+            $habitId = isset($habitArray['_id']) ? (string) $habitArray['_id'] : '';
+            
+            // Get activity for this date
+            $activity = null;
+            if ($habitId) {
+                $activity = DB::connection('mongodb')
+                    ->table('activities')
+                    ->where('habitId', $habitId)
+                    ->where('date', $targetDate)
+                    ->first();
+            }
+
+            return [
+                '_id' => ['$oid' => $habitId],
+                'habitId' => $habitId,
+                'title' => $habitArray['title'] ?? '',
+                'description' => $habitArray['description'] ?? null,
+                'category' => $habitArray['category'] ?? 'regular_habit',
+                'date' => $targetDate,
+                'isCompleted' => $activity ? $activity->isCompleted : false,
+                'activityId' => $activity ? (string) $activity->_id : null,
+                'created_at' => isset($habitArray['created_at']) && $habitArray['created_at']
+                    ? ['$date' => $habitArray['created_at']] 
+                    : null,
+                'updated_at' => isset($habitArray['updated_at']) && $habitArray['updated_at']
+                    ? ['$date' => $habitArray['updated_at']] 
+                    : null,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $habitsWithStatus,
+            'message' => 'Habits dengan status berhasil diambil'
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Gagal mengambil habits dengan status: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal mengambil habits dengan status: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+    public function getActivitiesByDate($date)
+    {
+        try {
+            // Validasi format tanggal
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Format tanggal tidak valid. Gunakan format YYYY-MM-DD'
+                ], 400);
+            }
+
+            // Validasi apakah tanggal valid
+            $dateObj = \DateTime::createFromFormat('Y-m-d', $date);
+            if (!$dateObj || $dateObj->format('Y-m-d') !== $date) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tanggal tidak valid'
+                ], 400);
+            }
+
+            Log::info("Mengambil aktivitas untuk tanggal: " . $date);
+
+            // Generate activities untuk tanggal ini jika belum ada
+            $this->generateDailyActivities($date);
+
+            $activities = DB::connection('mongodb')
+                ->table('activities')
+                ->where('date', $date)
+                ->get();
+
+            Log::info("Ditemukan " . $activities->count() . " activities untuk tanggal " . $date);
+
+            // Transform data untuk frontend
+            $transformedActivities = $activities->map(function ($activity) {
+                // Get habit info
+                $habit = DB::connection('mongodb')
+                    ->table('targets')
+                    ->where('_id', new ObjectId($activity->habitId))
+                    ->first();
+
+                return [
+                    '_id' => ['$oid' => (string) $activity->_id],
+                    'habitId' => (string) $activity->habitId,
+                    'habitTitle' => $habit ? $habit->title : 'Unknown Habit',
+                    'habitDescription' => $habit ? ($habit->description ?? null) : null,
+                    'date' => $activity->date,
+                    'isCompleted' => $activity->isCompleted ?? false,
+                    'created_at' => isset($activity->created_at) ? ['$date' => $activity->created_at->toDateTime()->format('c')] : null,
+                    'updated_at' => isset($activity->updated_at) ? ['$date' => $activity->updated_at->toDateTime()->format('c')] : null,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $transformedActivities,
+                'message' => 'Activities berhasil diambil'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Gagal mengambil activities: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil activities: ' . $e->getMessage()
             ], 500);
         }
     }

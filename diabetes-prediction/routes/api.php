@@ -84,6 +84,8 @@ Route::prefix('targets')->group(function () {
     
     // Statistics
     Route::get('/habits/{id}/stats', [TargetController::class, 'getHabitStats']);
+
+    
 });
 
 // Alternative direct routes (jika diperlukan)
@@ -98,3 +100,9 @@ Route::post('activities', [TargetController::class, 'createOrUpdateActivity']);
 Route::delete('activities/{id}', [TargetController::class, 'deleteActivity']);
 
 Route::get('habits/{id}/stats', [TargetController::class, 'getHabitStats']);
+
+// Tambahkan di routes/api.php
+Route::get('/habits-with-status/{date?}', [TargetController::class, 'getHabitsWithTodayStatus']);
+Route::post('/generate-daily-activities/{date?}', [TargetController::class, 'generateDailyActivities']);
+
+Route::post('/cleanup-corrupt-data', [TargetController::class, 'cleanupCorruptData']);
