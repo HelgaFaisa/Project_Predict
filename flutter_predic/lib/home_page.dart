@@ -77,7 +77,7 @@ class _HomePageState extends State<HomePage> {
       HealthGraphPage(patientId: widget.patientId), // Kirim patientId
       RiwayatPage(),
       EdukasiPage(),
-      const TargetHidupSehatPage(),
+      const TargetHidupPage (),
       GejalaPage(),
     ];
   }

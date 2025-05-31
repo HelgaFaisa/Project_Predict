@@ -11,7 +11,7 @@ use App\Http\Controllers\Api\PredictionHistoryApiController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\PatientController;
 use App\Http\Controllers\Api\ForgotPasswordController;
-use App\Http\Controllers\Api\TargetController;
+use App\Http\Controllers\Api\HabitController;
 
 /*
 |--------------------------------------------------------------------------
@@ -68,41 +68,28 @@ Route::prefix('patient')->group(function () {
     });
 });
 
-// Target/Habit Management Routes - MAIN ROUTES
-Route::prefix('targets')->group(function () {
-    // Habits CRUD
-    Route::get('/habits', [TargetController::class, 'getAllHabits']);
-    Route::get('/habits/{id}', [TargetController::class, 'getHabitById']);
-    Route::post('/habits', [TargetController::class, 'createHabit']);
-    Route::put('/habits/{id}', [TargetController::class, 'updateHabit']);
-    Route::delete('/habits/{id}', [TargetController::class, 'deleteHabit']);
-    
-    // Activities Management
-    Route::get('/activities/{date}', [TargetController::class, 'getActivitiesByDate']);
-    Route::post('/activities', [TargetController::class, 'createOrUpdateActivity']);
-    Route::delete('/activities/{id}', [TargetController::class, 'deleteActivity']);
-    
-    // Statistics
-    Route::get('/habits/{id}/stats', [TargetController::class, 'getHabitStats']);
-
-    
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
 });
 
-// Alternative direct routes (jika diperlukan)
-Route::get('habits', [TargetController::class, 'getAllHabits']);
-Route::get('habits/{id}', [TargetController::class, 'getHabitById']);
-Route::post('habits', [TargetController::class, 'createHabit']);
-Route::put('habits/{id}', [TargetController::class, 'updateHabit']);
-Route::delete('habits/{id}', [TargetController::class, 'deleteHabit']);
-
-Route::get('activities/{date}', [TargetController::class, 'getActivitiesByDate']);
-Route::post('activities', [TargetController::class, 'createOrUpdateActivity']);
-Route::delete('activities/{id}', [TargetController::class, 'deleteActivity']);
-
-Route::get('habits/{id}/stats', [TargetController::class, 'getHabitStats']);
-
-// Tambahkan di routes/api.php
-Route::get('/habits-with-status/{date?}', [TargetController::class, 'getHabitsWithTodayStatus']);
-Route::post('/generate-daily-activities/{date?}', [TargetController::class, 'generateDailyActivities']);
-
-Route::post('/cleanup-corrupt-data', [TargetController::class, 'cleanupCorruptData']);
+// Habit Management Routes
+Route::prefix('habits')->group(function () {
+    // GET Routes
+    Route::get('/', [HabitController::class, 'getAllHabits']);
+    Route::get('/completed', [HabitController::class, 'getCompletedHabits']);
+    Route::get('/category/{category}', [HabitController::class, 'getHabitsByCategory']);
+    Route::get('/{id}', [HabitController::class, 'getHabitById']);
+    
+    // POST Routes
+    Route::post('/', [HabitController::class, 'createHabit']);
+    Route::post('/{id}/progress', [HabitController::class, 'updateProgress']);
+    Route::post('/{id}/complete', [HabitController::class, 'markAsCompleted']);
+    Route::post('/{id}/uncomplete', [HabitController::class, 'unmarkAsCompleted']);
+    Route::post('/reset-all', [HabitController::class, 'resetAllHabits']);
+    
+    // PUT Routes
+    Route::put('/{id}', [HabitController::class, 'updateHabit']);
+    
+    // DELETE Routes
+    Route::delete('/{id}', [HabitController::class, 'deleteHabit']);
+});

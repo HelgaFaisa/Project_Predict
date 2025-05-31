@@ -51,7 +51,7 @@ class MyApp extends StatelessWidget {
         '/riwayat': (context) => RiwayatPage(),
         '/edukasi': (context) => EdukasiPage(),
         '/gejala': (context) => GejalaPage(),
-        '/target': (context) => TargetHidupSehatPage(),
+        '/target': (context) => TargetHidupPage(),
       },
       // PERBAIKAN: Gunakan onGenerateRoute untuk handling dynamic data
       onGenerateRoute: (settings) {

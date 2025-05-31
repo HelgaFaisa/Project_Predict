@@ -40,23 +40,40 @@ class Activity {
     
     print('DEBUG Activity _extractId: $idField (${idField.runtimeType})');
     
-    // Jika sudah berupa string langsung
-    if (idField is String) return idField;
-    
     // Jika berupa Map dengan format {'$oid': 'id_string'}
     if (idField is Map) {
+      String? extractedId;
+      
       if (idField.containsKey('\$oid')) {
-        String? extractedId = idField['\$oid'] as String?;
-        print('DEBUG Activity extracted ID from \$oid: $extractedId');
-        return extractedId;
+        extractedId = idField['\$oid'] as String?;
+      } else if (idField.containsKey('oid')) {
+        extractedId = idField['oid'] as String?;
+      } else if (idField.containsKey('_id')) {
+        extractedId = idField['_id'] as String?;
+      } else {
+        // Ambil value pertama yang bukan null
+        extractedId = idField.values.firstWhere(
+          (v) => v != null && v.toString().isNotEmpty,
+          orElse: () => null,
+        )?.toString();
       }
-      // Fallback jika ada key lain
-      return idField.values.first?.toString();
+      
+      print('DEBUG Activity extracted ID from Map: $extractedId');
+      
+      if (extractedId != null && 
+          extractedId.isNotEmpty && 
+          extractedId != "null") {
+        return extractedId.trim();
+      }
     }
     
-    String convertedId = idField.toString();
-    print('DEBUG Activity converted ID: $convertedId');
-    return convertedId;
+    // Jika sudah berupa string langsung
+    if (idField is String && idField.isNotEmpty && idField != "null") {
+      return idField.trim();
+    }
+    
+    print('WARNING: Could not extract valid ID from: $idField');
+    return null;
   }
 
   // Fungsi untuk mengekstrak habitId (bisa berupa string langsung atau ObjectId)
@@ -65,20 +82,33 @@ class Activity {
     
     print('DEBUG Activity _extractHabitId: $habitIdField (${habitIdField.runtimeType})');
     
-    // Jika sudah berupa string langsung
-    if (habitIdField is String) return habitIdField;
-    
     // Jika berupa Map dengan format {'$oid': 'id_string'}
     if (habitIdField is Map) {
+      String extractedHabitId = '';
+      
       if (habitIdField.containsKey('\$oid')) {
-        String extractedHabitId = habitIdField['\$oid'] as String? ?? '';
-        print('DEBUG Activity extracted habitId from \$oid: $extractedHabitId');
-        return extractedHabitId;
+        extractedHabitId = habitIdField['\$oid'] as String? ?? '';
+      } else if (habitIdField.containsKey('oid')) {
+        extractedHabitId = habitIdField['oid'] as String? ?? '';
+      } else if (habitIdField.containsKey('_id')) {
+        extractedHabitId = habitIdField['_id'] as String? ?? '';
+      } else {
+        extractedHabitId = habitIdField.values.firstWhere(
+          (v) => v != null && v.toString().isNotEmpty,
+          orElse: () => '',
+        ).toString();
       }
-      return habitIdField.values.first?.toString() ?? '';
+      
+      print('DEBUG Activity extracted habitId from Map: $extractedHabitId');
+      return extractedHabitId.trim();
     }
     
-    String convertedHabitId = habitIdField.toString();
+    // Jika sudah berupa string langsung
+    if (habitIdField is String) {
+      return habitIdField.trim();
+    }
+    
+    String convertedHabitId = habitIdField.toString().trim();
     print('DEBUG Activity converted habitId: $convertedHabitId');
     return convertedHabitId;
   }
@@ -122,12 +152,39 @@ class Activity {
   // Method untuk konversi ke format yang diharapkan API
   Map<String, dynamic> toApiJson() {
     return {
-      'habitId': habitId,
+      'habitId': habitId.trim(), // Pastikan habitId tidak ada whitespace
       'date': DateFormat('yyyy-MM-dd').format(date),
       'isCompleted': isCompleted,
     };
   }
 
+  // Method untuk validasi ID sebelum operasi
+  bool get hasValidId {
+    return id != null && 
+           id!.isNotEmpty && 
+           id != 'null' && 
+           id!.trim().isNotEmpty;
+  }
+
+  // Method untuk mendapatkan ID yang safe untuk API calls
+  String? get safeId {
+    if (!hasValidId) return null;
+    return id!.trim();
+  }
+
+  // Method untuk validasi habitId
+  bool get hasValidHabitId {
+    return habitId.isNotEmpty && 
+           habitId != 'null' && 
+           habitId.trim().isNotEmpty;
+  }
+
+  // Method untuk mendapatkan habitId yang safe
+  String get safeHabitId {
+    return habitId.trim();
+  }
+
+  // Method untuk membuat copy dengan perubahan tertentu
   Activity copyWith({
     String? id,
     String? habitId,
@@ -148,7 +205,7 @@ class Activity {
 
   @override
   String toString() {
-    return 'Activity{id: $id, habitId: $habitId, date: ${DateFormat('yyyy-MM-dd').format(date)}, isCompleted: $isCompleted}';
+    return 'Activity{id: $id, habitId: $habitId, date: $date, isCompleted: $isCompleted}';
   }
 
   @override
@@ -158,7 +215,7 @@ class Activity {
           runtimeType == other.runtimeType &&
           id == other.id &&
           habitId == other.habitId &&
-          DateFormat('yyyy-MM-dd').format(date) == DateFormat('yyyy-MM-dd').format(other.date) &&
+          date == other.date &&
           isCompleted == other.isCompleted;
 
   @override

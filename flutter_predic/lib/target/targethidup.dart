@@ -1,485 +1,323 @@
-// lib/target/targethidup.dart
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
-import 'package:intl/intl.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import '../model/habit.dart';
-import '../model/activity.dart';
-import '../api/api_service.dart'; // Updated import path
+import 'package:flutter/services.dart';
+import '../api/api_target.dart'; // Import your API service
 
-class TargetHidupSehatPage extends StatefulWidget {
-  const TargetHidupSehatPage({Key? key}) : super(key: key);
+class TargetHidupPage extends StatefulWidget {
+  const TargetHidupPage({Key? key}) : super(key: key);
 
   @override
-  State<TargetHidupSehatPage> createState() => _TargetHidupSehatPageState();
+  State<TargetHidupPage> createState() => _TargetHidupPageState();
 }
 
-class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
-  DateTime _selectedDay = DateTime.now();
-  DateTime _focusedDay = DateTime.now();
-  CalendarFormat _calendarFormat = CalendarFormat.month;
-  
-  List<HabitWithStatus> _habitsWithStatus = [];
-  bool _isLoading = false;
-  bool _localeInitialized = false;
+class _TargetHidupPageState extends State<TargetHidupPage>
+    with TickerProviderStateMixin {
+  List<Map<String, dynamic>> habits = [];
+  List<Map<String, dynamic>> filteredHabits = [];
+  bool isLoading = true;
+  String selectedCategory = 'all';
+  String selectedTargetType = 'all';
+  late TabController _tabController;
+
+  final List<String> categories = [
+    'all',
+    'health',
+    'fitness',
+    'learning',
+    'productivity',
+    'social',
+    'financial',
+    'spiritual',
+    'hobby',
+    'regular_habit'
+  ];
+
+  final List<String> targetTypes = [
+    'all',
+    'daily',
+    'weekly',
+    'monthly',
+    'yearly'
+  ];
 
   @override
   void initState() {
     super.initState();
-    _initializeLocale();
+    _tabController = TabController(length: 4, vsync: this);
+    loadHabits();
   }
 
-  Future<void> _initializeLocale() async {
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> loadHabits() async {
+    setState(() => isLoading = true);
     try {
-      await initializeDateFormatting('id_ID', null);
+      final data = await ApiTarget.getAllHabits();
       setState(() {
-        _localeInitialized = true;
+        habits = data;
+        filteredHabits = data;
+        isLoading = false;
       });
-      _loadData();
+      filterHabits();
     } catch (e) {
-      setState(() {
-        _localeInitialized = true;
-      });
-      _loadData();
+      setState(() => isLoading = false);
+      _showErrorSnackbar('Gagal memuat data: $e');
     }
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    try {
-      final selectedDateString = DateFormat('yyyy-MM-dd').format(_selectedDay);
-      final habitsWithStatus = await HabitService.getHabitsWithTodayStatus(selectedDateString);
-      setState(() {
-        _habitsWithStatus = habitsWithStatus;
-      });
-    } catch (e) {
-      _showError('Gagal memuat data: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
+  void filterHabits() {
+    setState(() {
+      filteredHabits = habits.where((habit) {
+        bool categoryMatch = selectedCategory == 'all' ||
+            habit['category'] == selectedCategory;
+        bool targetTypeMatch = selectedTargetType == 'all' ||
+            habit['target_type'] == selectedTargetType;
+        return categoryMatch && targetTypeMatch;
+      }).toList();
+    });
   }
 
-  Future<void> _loadHabitsForDate(DateTime date) async {
-    setState(() => _isLoading = true);
-    try {
-      final dateString = DateFormat('yyyy-MM-dd').format(date);
-      final habitsWithStatus = await HabitService.getHabitsWithTodayStatus(dateString);
-      setState(() {
-        _habitsWithStatus = habitsWithStatus;
-        _selectedDay = date;
-        _focusedDay = date;
-      });
-    } catch (e) {
-      _showError('Gagal memuat data untuk tanggal ini: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _toggleActivity(String habitId, bool isCompleted) async {
-  // Debug log
-  print('DEBUG: Attempting to toggle activity for habitId: "$habitId"');
-  
-  // Validasi habitId lebih ketat
-  if (habitId.isEmpty || habitId.trim().isEmpty) {
-    print('ERROR: habitId is empty or null');
-    _showError('Habit ID tidak valid. Silakan refresh halaman.');
-    return;
-  }
-
-  try {
-    final activity = Activity(
-      habitId: habitId.trim(), // Pastikan tidak ada whitespace
-      date: _selectedDay,
-      isCompleted: isCompleted,
-    );
-    
-    print('DEBUG: Creating activity with habitId: "${activity.habitId}"');
-    
-    await HabitService.createOrUpdateActivity(activity);
-    _showSuccess('Status aktivitas berhasil diperbarui');
-    _loadHabitsForDate(_selectedDay);
-  } catch (e) {
-    print('ERROR: Failed to toggle activity: $e');
-    _showError('Gagal memperbarui aktivitas: $e');
-  }
-}
-
-  Future<void> _showAddHabitDialog() async {
-    final titleController = TextEditingController();
-    final descriptionController = TextEditingController();
-    
-    return showDialog<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Tambah Habit Baru'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Judul Habit',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Deskripsi (Opsional)',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Batal'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            ElevatedButton(
-              child: const Text('Simpan'),
-              onPressed: () async {
-                if (titleController.text.trim().isEmpty) {
-                  _showError('Judul habit tidak boleh kosong');
-                  return;
-                }
-                
-                try {
-                  final newHabit = Habit(
-                    title: titleController.text.trim(),
-                    description: descriptionController.text.trim().isEmpty 
-                        ? null 
-                        : descriptionController.text.trim(),
-                    category: 'regular_habit',
-                  );
-                  
-                  await HabitService.createHabit(newHabit);
-                  Navigator.of(context).pop();
-                  _showSuccess('Habit berhasil ditambahkan');
-                  _loadData();
-                } catch (e) {
-                  _showError('Gagal menambah habit: $e');
-                }
-              },
-            ),
-          ],
-        );
-      },
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: 100), // Added margin to avoid bottom nav
+      ),
     );
   }
 
-  Future<void> _showEditHabitDialog(HabitWithStatus habitWithStatus) async {
-    final titleController = TextEditingController(text: habitWithStatus.title);
-    final descriptionController = TextEditingController(text: habitWithStatus.description ?? '');
-    
-    return showDialog<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Edit Habit'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Judul Habit',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Deskripsi (Opsional)',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                ),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Hapus'),
-              onPressed: () async {
-                final confirm = await _showConfirmDialog('Hapus Habit', 'Apakah Anda yakin ingin menghapus habit ini?');
-                if (confirm) {
-                  try {
-                    await HabitService.deleteHabit(habitWithStatus.habitId);
-                    Navigator.of(context).pop();
-                    _showSuccess('Habit berhasil dihapus');
-                    _loadData();
-                  } catch (e) {
-                    _showError('Gagal menghapus habit: $e');
-                  }
-                }
-              },
-            ),
-            TextButton(
-              child: const Text('Batal'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            ElevatedButton(
-              child: const Text('Simpan'),
-              onPressed: () async {
-                if (titleController.text.trim().isEmpty) {
-                  _showError('Judul habit tidak boleh kosong');
-                  return;
-                }
-                
-                try {
-                  final updatedHabit = Habit(
-                    id: habitWithStatus.habitId,
-                    title: titleController.text.trim(),
-                    description: descriptionController.text.trim().isEmpty 
-                        ? null 
-                        : descriptionController.text.trim(),
-                    category: habitWithStatus.category,
-                  );
-                  
-                  await HabitService.updateHabit(habitWithStatus.habitId, updatedHabit);
-                  Navigator.of(context).pop();
-                  _showSuccess('Habit berhasil diperbarui');
-                  _loadData();
-                } catch (e) {
-                  _showError('Gagal memperbarui habit: $e');
-                }
-              },
-            ),
-          ],
-        );
-      },
+  void _showSuccessSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: 100), // Added margin to avoid bottom nav
+      ),
     );
-  }
-
-  Future<bool> _showConfirmDialog(String title, String message) async {
-    return await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(message),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Batal'),
-              onPressed: () {
-                Navigator.of(context).pop(false);
-              },
-            ),
-            ElevatedButton(
-              child: const Text('Ya'),
-              onPressed: () {
-                Navigator.of(context).pop(true);
-              },
-            ),
-          ],
-        );
-      },
-    ) ?? false;
-  }
-
-  void _showError(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-  }
-
-  void _showSuccess(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_localeInitialized) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Target Hidup Sehat'),
-        backgroundColor: Colors.green[600],
-        foregroundColor: Colors.white,
+        title: const Text(
+          'Target Hidup',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: const Color(0xFF6366F1),
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _showAddHabitDialog,
-            tooltip: 'Tambah Habit Baru',
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-            tooltip: 'Refresh Data',
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: loadHabits,
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          tabs: const [
+            Tab(text: 'Semua'),
+            Tab(text: 'Aktif'),
+            Tab(text: 'Selesai'),
+            Tab(text: 'Statistik'),
+          ],
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SafeArea(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    _buildCalendar(),
-                    _buildSelectedDateInfo(),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.4, // Fixed height
-                      child: _buildHabitsList(),
-                    ),
-                  ],
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildAllHabitsTab(),
+          _buildActiveHabitsTab(),
+          _buildCompletedHabitsTab(),
+          _buildStatsTab(),
+        ],
+      ),
+      // Changed FloatingActionButton position and style
+      floatingActionButton: Container(
+        margin: const EdgeInsets.only(bottom: 80), // Add margin to avoid bottom nav
+        child: FloatingActionButton.extended(
+          onPressed: () => _showCreateHabitDialog(),
+          backgroundColor: const Color(0xFF6366F1),
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text(
+            'Tambah Target',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat, // Changed to center float
+    );
+  }
+
+  Widget _buildAllHabitsTab() {
+    return Column(
+      children: [
+        _buildFilterSection(),
+        Expanded(
+          child: isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : filteredHabits.isEmpty
+                  ? _buildEmptyState()
+                  : _buildHabitsList(filteredHabits),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActiveHabitsTab() {
+    final activeHabits = habits.where((h) => !h['is_completed']).toList();
+    return isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : activeHabits.isEmpty
+            ? _buildEmptyState('Tidak ada target aktif')
+            : _buildHabitsList(activeHabits);
+  }
+
+  Widget _buildCompletedHabitsTab() {
+    final completedHabits = habits.where((h) => h['is_completed']).toList();
+    return isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : completedHabits.isEmpty
+            ? _buildEmptyState('Belum ada target yang selesai')
+            : _buildHabitsList(completedHabits);
+  }
+
+  Widget _buildStatsTab() {
+    if (isLoading) return const Center(child: CircularProgressIndicator());
+
+    final totalHabits = habits.length;
+    final completedHabits = habits.where((h) => h['is_completed']).length;
+    final activeHabits = totalHabits - completedHabits;
+    final completionRate = totalHabits > 0 ? (completedHabits / totalHabits) : 0.0;
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Ringkasan Target',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  'Total Target',
+                  totalHabits.toString(),
+                  Icons.track_changes,
+                  const Color(0xFF6366F1),
                 ),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard(
+                  'Aktif',
+                  activeHabits.toString(),
+                  Icons.play_circle,
+                  const Color(0xFF059669),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  'Selesai',
+                  completedHabits.toString(),
+                  Icons.check_circle,
+                  const Color(0xFF10B981),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard(
+                  'Tingkat Selesai',
+                  '${(completionRate * 100).toStringAsFixed(1)}%',
+                  Icons.analytics,
+                  const Color(0xFF8B5CF6),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Progress Target',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1F2937),
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddHabitDialog,
-        backgroundColor: Colors.green[600],
-        child: const Icon(Icons.add, color: Colors.white),
-        tooltip: 'Tambah Habit Baru',
+          ),
+          const SizedBox(height: 16),
+          LinearProgressIndicator(
+            value: completionRate,
+            backgroundColor: Colors.grey[200],
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+            minHeight: 8,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildCalendar() {
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Container(
-      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: TableCalendar<HabitWithStatus>(
-        firstDay: DateTime.utc(2020, 1, 1),
-        lastDay: DateTime.utc(2030, 12, 31),
-        focusedDay: _focusedDay,
-        calendarFormat: _calendarFormat,
-        locale: 'id_ID',
-        selectedDayPredicate: (day) {
-          return isSameDay(_selectedDay, day);
-        },
-        onDaySelected: (selectedDay, focusedDay) {
-          if (!isSameDay(_selectedDay, selectedDay)) {
-            _loadHabitsForDate(selectedDay);
-          }
-        },
-        onFormatChanged: (format) {
-          if (_calendarFormat != format) {
-            setState(() {
-              _calendarFormat = format;
-            });
-          }
-        },
-        onPageChanged: (focusedDay) {
-          _focusedDay = focusedDay;
-        },
-        calendarStyle: CalendarStyle(
-          todayDecoration: BoxDecoration(
-            color: Colors.green[400],
-            shape: BoxShape.circle,
-          ),
-          selectedDecoration: BoxDecoration(
-            color: Colors.green[600],
-            shape: BoxShape.circle,
-          ),
-          weekendTextStyle: TextStyle(
-            color: Colors.red[600],
-          ),
-        ),
-        headerStyle: const HeaderStyle(
-          formatButtonVisible: true,
-          titleCentered: true,
-          formatButtonShowsNext: false,
-          formatButtonDecoration: BoxDecoration(
-            color: Colors.green,
-            borderRadius: BorderRadius.all(Radius.circular(12.0)),
-          ),
-          formatButtonTextStyle: TextStyle(
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSelectedDateInfo() {
-    final dateFormat = DateFormat('EEEE, d MMMM yyyy', 'id_ID');
-    final completedCount = _habitsWithStatus.where((h) => h.isCompleted).length;
-    final totalHabits = _habitsWithStatus.length;
-    
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.green[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green[200]!),
-      ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  dateFormat.format(_selectedDay),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+          Row(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const Spacer(),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: color,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Progress: $completedCount/$totalHabits habit selesai',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          SizedBox(
-            width: 40,
-            height: 40,
-            child: CircularProgressIndicator(
-              value: totalHabits > 0 ? completedCount / totalHabits : 0,
-              backgroundColor: Colors.grey[300],
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.green[600]!),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF6B7280),
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -487,210 +325,605 @@ class _TargetHidupSehatPageState extends State<TargetHidupSehatPage> {
     );
   }
 
-  Widget _buildHabitsList() {
-    if (_habitsWithStatus.isEmpty) {
-      return Center(
+  Widget _buildFilterSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  decoration: InputDecoration(
+                    labelText: 'Kategori',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  items: categories.map((category) {
+                    return DropdownMenuItem(
+                      value: category,
+                      child: Text(_getCategoryDisplayName(category)),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() => selectedCategory = value!);
+                    filterHabits();
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: selectedTargetType,
+                  decoration: InputDecoration(
+                    labelText: 'Periode',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  items: targetTypes.map((type) {
+                    return DropdownMenuItem(
+                      value: type,
+                      child: Text(_getTargetTypeDisplayName(type)),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() => selectedTargetType = value!);
+                    filterHabits();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState([String? message]) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 100), // Add padding to avoid floating button overlap
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.task_alt,
-              size: 64,
+              Icons.flag,
+              size: 80,
               color: Colors.grey[400],
             ),
             const SizedBox(height: 16),
             Text(
-              'Belum ada habit yang ditambahkan',
+              message ?? 'Belum ada target hidup',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 18,
                 color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: _showAddHabitDialog,
-              icon: const Icon(Icons.add),
-              label: const Text('Tambah Habit Pertama'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green[600],
-                foregroundColor: Colors.white,
+            Text(
+              'Mulai dengan menambah target pertama Anda',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
               ),
             ),
           ],
         ),
-      );
-    }
+      ),
+    );
+  }
 
+  Widget _buildHabitsList(List<Map<String, dynamic>> habitsList) {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _habitsWithStatus.length,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), // Added bottom padding to avoid floating button
+      itemCount: habitsList.length,
       itemBuilder: (context, index) {
-        final habitWithStatus = _habitsWithStatus[index];
-        final isCompleted = habitWithStatus.isCompleted;
-        
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: isCompleted ? Colors.green : Colors.grey[300]!,
-              width: 1,
-            ),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(16),
-            leading: Checkbox(
-              value: isCompleted,
-              onChanged: (bool? value) {
-                _toggleActivity(habitWithStatus.habitId, value ?? false);
-              },
-              activeColor: Colors.green[600],
-            ),
-            title: Text(
-              habitWithStatus.title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                decoration: isCompleted ? TextDecoration.lineThrough : null,
-                color: isCompleted ? Colors.grey[600] : null,
-              ),
-            ),
-            subtitle: habitWithStatus.description != null && habitWithStatus.description!.isNotEmpty
-                ? Text(
-                    habitWithStatus.description!,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                      decoration: isCompleted ? TextDecoration.lineThrough : null,
-                    ),
-                  )
-                : null,
-            trailing: PopupMenuButton<String>(
-              onSelected: (String value) {
-                if (value == 'edit') {
-                  _showEditHabitDialog(habitWithStatus);
-                } else if (value == 'delete') {
-                  _showConfirmDialog('Hapus Habit', 'Apakah Anda yakin ingin menghapus habit "${habitWithStatus.title}"?')
-                      .then((confirmed) {
-                    if (confirmed) {
-                      HabitService.deleteHabit(habitWithStatus.habitId).then((_) {
-                        _showSuccess('Habit berhasil dihapus');
-                        _loadData();
-                      }).catchError((e) {
-                        _showError('Gagal menghapus habit: $e');
-                      });
-                    }
-                  });
-                } else if (value == 'stats') {
-                  _showHabitStats(habitWithStatus);
-                }
-              },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                const PopupMenuItem<String>(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit, size: 20),
-                      SizedBox(width: 8),
-                      Text('Edit'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'stats',
-                  child: Row(
-                    children: [
-                      Icon(Icons.analytics, size: 20, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text('Statistik', style: TextStyle(color: Colors.blue)),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, size: 20, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Hapus', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+        final habit = habitsList[index];
+        return _buildHabitCard(habit);
       },
     );
   }
 
-  Future<void> _showHabitStats(HabitWithStatus habitWithStatus) async {
-    try {
-      setState(() => _isLoading = true);
-      final stats = await HabitService.getHabitStats(habitWithStatus.habitId);
-      
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Statistik: ${habitWithStatus.title}'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildStatRow('Total Aktivitas', '${stats.totalActivities}'),
-                  _buildStatRow('Aktivitas Selesai', '${stats.completedActivities}'),
-                  _buildStatRow('Tingkat Penyelesaian', '${stats.completionRate.toStringAsFixed(1)}%'),
-                  _buildStatRow('Streak Saat Ini', '${stats.currentStreak} hari'),
-                  _buildStatRow('Streak Terpanjang', '${stats.longestStreak} hari'),
-                  const SizedBox(height: 16),
-                  LinearProgressIndicator(
-                    value: stats.completionRate / 100,
-                    backgroundColor: Colors.grey[300],
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.green[600]!),
+  Widget _buildHabitCard(Map<String, dynamic> habit) {
+    final progress = habit['current_progress'] ?? 0;
+    final target = habit['target_value'] ?? 1;
+    final progressPercentage = target > 0 ? (progress / target).clamp(0.0, 1.0) : 0.0;
+    final isCompleted = habit['is_completed'] ?? false;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: isCompleted
+            ? Border.all(color: const Color(0xFF10B981), width: 2)
+            : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      habit['title'] ?? 'Tanpa Judul',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isCompleted
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFF1F2937),
+                        decoration: isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                    if (habit['description']?.isNotEmpty == true) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        habit['description'],
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (value) => _handleMenuAction(value, habit),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 16),
+                        SizedBox(width: 8),
+                        Text('Edit'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, size: 16, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Hapus', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Tutup'),
-              ),
             ],
-          );
-        },
-      );
-    } catch (e) {
-      _showError('Gagal memuat statistik: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Widget _buildStatRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Flexible(
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 14),
-            ),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _buildCategoryChip(habit['category'] ?? 'regular_habit'),
+              const SizedBox(width: 8),
+              _buildTargetTypeChip(habit['target_type'] ?? 'daily'),
+              const Spacer(),
+              if (isCompleted)
+                const Icon(
+                  Icons.check_circle,
+                  color: Color(0xFF10B981),
+                  size: 20,
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Progress: $progress / $target',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                        Text(
+                          '${(progressPercentage * 100).toInt()}%',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF6366F1),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    LinearProgressIndicator(
+                      value: progressPercentage,
+                      backgroundColor: Colors.grey[200],
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isCompleted
+                            ? const Color(0xFF10B981)
+                            : const Color(0xFF6366F1),
+                      ),
+                      minHeight: 6,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (!isCompleted) ...[
+                IconButton(
+                  onPressed: () => _updateProgress(habit['_id'], 1),
+                  icon: const Icon(Icons.add_circle),
+                  color: const Color(0xFF6366F1),
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => _markAsCompleted(habit['_id']),
+                  icon: const Icon(Icons.check_circle_outline),
+                  color: const Color(0xFF10B981),
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
+                ),
+              ] else ...[
+                IconButton(
+                  onPressed: () => _unmarkAsCompleted(habit['_id']),
+                  icon: const Icon(Icons.undo),
+                  color: const Color(0xFF6B7280),
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
+                ),
+              ],
+            ],
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildCategoryChip(String category) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF6366F1).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        _getCategoryDisplayName(category),
+        style: const TextStyle(
+          fontSize: 12,
+          color: Color(0xFF6366F1),
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTargetTypeChip(String targetType) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF059669).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        _getTargetTypeDisplayName(targetType),
+        style: const TextStyle(
+          fontSize: 12,
+          color: Color(0xFF059669),
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  void _handleMenuAction(String action, Map<String, dynamic> habit) {
+    switch (action) {
+      case 'edit':
+        _showEditHabitDialog(habit);
+        break;
+      case 'delete':
+        _showDeleteConfirmation(habit['_id']);
+        break;
+    }
+  }
+
+  void _showCreateHabitDialog() {
+    _showHabitDialog();
+  }
+
+  void _showEditHabitDialog(Map<String, dynamic> habit) {
+    _showHabitDialog(habit: habit);
+  }
+
+  void _showHabitDialog({Map<String, dynamic>? habit}) {
+    final isEdit = habit != null;
+    final titleController = TextEditingController(text: habit?['title'] ?? '');
+    final descriptionController = TextEditingController(text: habit?['description'] ?? '');
+    final targetValueController = TextEditingController(
+      text: (habit?['target_value'] ?? 1).toString(),
+    );
+    
+    String selectedCategory = habit?['category'] ?? 'regular_habit';
+    String selectedTargetType = habit?['target_type'] ?? 'daily';
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(isEdit ? 'Edit Target' : 'Tambah Target Baru'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Judul Target *',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Deskripsi',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  decoration: const InputDecoration(
+                    labelText: 'Kategori *',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: categories.skip(1).map((category) {
+                    return DropdownMenuItem(
+                      value: category,
+                      child: Text(_getCategoryDisplayName(category)),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setDialogState(() => selectedCategory = value!);
+                  },
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedTargetType,
+                  decoration: const InputDecoration(
+                    labelText: 'Periode Target *',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: targetTypes.skip(1).map((type) {
+                    return DropdownMenuItem(
+                      value: type,
+                      child: Text(_getTargetTypeDisplayName(type)),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setDialogState(() => selectedTargetType = value!);
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: targetValueController,
+                  decoration: const InputDecoration(
+                    labelText: 'Target Value *',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () => _saveHabit(
+                context,
+                isEdit,
+                habit?['_id'],
+                titleController.text,
+                descriptionController.text,
+                selectedCategory,
+                selectedTargetType,
+                int.tryParse(targetValueController.text) ?? 1,
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+                foregroundColor: Colors.white,
+              ),
+              child: Text(isEdit ? 'Update' : 'Simpan'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveHabit(
+    BuildContext context,
+    bool isEdit,
+    String? id,
+    String title,
+    String description,
+    String category,
+    String targetType,
+    int targetValue,
+  ) async {
+    if (title.trim().isEmpty) {
+      _showErrorSnackbar('Judul target tidak boleh kosong');
+      return;
+    }
+
+    try {
+      if (isEdit && id != null) {
+        await ApiTarget.updateHabit(
+          id: id,
+          title: title,
+          description: description,
+          category: category,
+          targetType: targetType,
+          targetValue: targetValue,
+        );
+        _showSuccessSnackbar('Target berhasil diupdate');
+      } else {
+        await ApiTarget.createHabit(
+          title: title,
+          description: description,
+          category: category,
+          targetType: targetType,
+          targetValue: targetValue,
+        );
+        _showSuccessSnackbar('Target baru berhasil ditambahkan');
+      }
+      
+      Navigator.pop(context);
+      loadHabits();
+    } catch (e) {
+      _showErrorSnackbar('Gagal menyimpan target: $e');
+    }
+  }
+
+  void _showDeleteConfirmation(String id) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi Hapus'),
+        content: const Text('Apakah Anda yakin ingin menghapus target ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteHabit(id);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteHabit(String id) async {
+    try {
+      await ApiTarget.deleteHabit(id);
+      _showSuccessSnackbar('Target berhasil dihapus');
+      loadHabits();
+    } catch (e) {
+      _showErrorSnackbar('Gagal menghapus target: $e');
+    }
+  }
+
+  Future<void> _updateProgress(String id, int increment) async {
+    try {
+      await ApiTarget.updateProgress(id: id, increment: increment);
+      _showSuccessSnackbar('Progress berhasil diupdate');
+      loadHabits();
+      HapticFeedback.lightImpact();
+    } catch (e) {
+      _showErrorSnackbar('Gagal mengupdate progress: $e');
+    }
+  }
+
+  Future<void> _markAsCompleted(String id) async {
+    try {
+      await ApiTarget.markAsCompleted(id);
+      _showSuccessSnackbar('Target berhasil diselesaikan!');
+      loadHabits();
+      HapticFeedback.mediumImpact();
+    } catch (e) {
+      _showErrorSnackbar('Gagal menyelesaikan target: $e');
+    }
+  }
+
+  Future<void> _unmarkAsCompleted(String id) async {
+    try {
+      await ApiTarget.unmarkAsCompleted(id);
+      _showSuccessSnackbar('Target dikembalikan ke status aktif');
+      loadHabits();
+    } catch (e) {
+      _showErrorSnackbar('Gagal mengubah status target: $e');
+    }
+  }
+
+  String _getCategoryDisplayName(String category) {
+    const categoryNames = {
+      'all': 'Semua Kategori',
+      'health': 'Kesehatan',
+      'fitness': 'Kebugaran',
+      'learning': 'Pembelajaran',
+      'productivity': 'Produktivitas',
+      'social': 'Sosial',
+      'financial': 'Keuangan',
+      'spiritual': 'Spiritual',
+      'hobby': 'Hobi',
+      'regular_habit': 'Kebiasaan Rutin',
+    };
+    return categoryNames[category] ?? category;
+  }
+
+  String _getTargetTypeDisplayName(String targetType) {
+    const targetTypeNames = {
+      'all': 'Semua Periode',
+      'daily': 'Harian',
+      'weekly': 'Mingguan',
+      'monthly': 'Bulanan',
+      'yearly': 'Tahunan',
+    };
+    return targetTypeNames[targetType] ?? targetType;
   }
 }

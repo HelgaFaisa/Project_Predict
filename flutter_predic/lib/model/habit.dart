@@ -1,6 +1,4 @@
 // lib/model/habit.dart
-import 'package:intl/intl.dart';
-
 class Habit {
   String? id;
   String title;
@@ -13,131 +11,175 @@ class Habit {
     this.id,
     required this.title,
     this.description,
-    required this.category,
+    this.category = 'regular_habit',
     this.createdAt,
     this.updatedAt,
   });
 
+  // FIXED: Enhanced fromJson with better empty ObjectId handling
   factory Habit.fromJson(Map<String, dynamic> json) {
-    print('DEBUG Habit.fromJson input: $json');
-    
-    Habit habit = Habit(
-      id: _extractId(json['_id']),
-      title: json['title'] ?? '',
-      description: json['description'],
-      category: json['category'] ?? 'regular_habit', // default sesuai controller
-      createdAt: _parseDate(json['created_at'] ?? json['createdAt']),
-      updatedAt: _parseDate(json['updated_at'] ?? json['updatedAt']),
-    );
-    
-    print('DEBUG Habit.fromJson result: $habit');
-    return habit;
-  }
-
-  // Fungsi untuk mengekstrak ID dari format MongoDB yang dikirim controller
-  static String? _extractId(dynamic idField) {
-    if (idField == null) return null;
-    
-    print('DEBUG Habit _extractId: $idField (${idField.runtimeType})');
-    
-    // Jika berupa Map dengan format {'$oid': 'id_string'}
-    if (idField is Map) {
-      if (idField.containsKey('\$oid')) {
-        String? extractedId = idField['\$oid'] as String?;
-        print('DEBUG Habit extracted ID from \$oid: $extractedId');
-        // Pastikan tidak kosong
-        if (extractedId != null && extractedId.isNotEmpty) {
-          return extractedId;
+    try {
+      print('DEBUG Habit.fromJson input: $json');
+      
+      // Extract ID from various possible formats
+      String? extractedId;
+      
+      // Check for 'id' field first (processed by service)
+      if (json['id'] != null && json['id'].toString().isNotEmpty) {
+        extractedId = json['id'].toString().trim();
+        print('DEBUG: Found processed id: $extractedId');
+      }
+      // Check for '_id' field with MongoDB format
+      else if (json['_id'] != null) {
+        final idField = json['_id'];
+        print('DEBUG: Processing _id field: $idField (${idField.runtimeType})');
+        
+        if (idField is Map) {
+          // Handle MongoDB ObjectId format: {$oid: "actual_id"}
+          if (idField.containsKey('\$oid')) {
+            final oidValue = idField['\$oid'];
+            print('DEBUG: Found \$oid value: "$oidValue" (${oidValue.runtimeType})');
+            
+            if (oidValue != null && 
+                oidValue.toString().isNotEmpty && 
+                oidValue.toString().trim() != '' &&
+                oidValue.toString() != 'null') {
+              extractedId = oidValue.toString().trim();
+              print('DEBUG: Extracted from \$oid: $extractedId');
+            } else {
+              print('WARNING: \$oid is empty or null: "$oidValue"');
+            }
+          }
+          // Alternative format: {oid: "actual_id"}
+          else if (idField.containsKey('oid')) {
+            final oidValue = idField['oid'];
+            if (oidValue != null && oidValue.toString().isNotEmpty) {
+              extractedId = oidValue.toString().trim();
+              print('DEBUG: Extracted from oid: $extractedId');
+            }
+          }
+          // If Map but no recognizable ObjectId pattern, try to get any valid value
+          else {
+            final values = idField.values.where((v) => 
+              v != null && 
+              v.toString().isNotEmpty && 
+              v.toString().trim() != '' &&
+              v.toString() != 'null'
+            );
+            if (values.isNotEmpty) {
+              extractedId = values.first.toString().trim();
+              print('DEBUG: Extracted from Map values: $extractedId');
+            }
+          }
+        } 
+        else if (idField is String && idField.isNotEmpty && idField.trim() != '') {
+          extractedId = idField.trim();
+          print('DEBUG: Direct string _id: $extractedId');
+        } 
+        else {
+          final stringId = idField.toString().trim();
+          if (stringId.isNotEmpty && stringId != 'null') {
+            extractedId = stringId;
+            print('DEBUG: Converted _id to string: $extractedId');
+          }
         }
       }
-      // Fallback jika ada key lain
-      var firstValue = idField.values.first?.toString();
-      if (firstValue != null && firstValue.isNotEmpty) {
-        return firstValue;
-      }
-    }
-    
-    // Jika sudah berupa string langsung
-    if (idField is String && idField.isNotEmpty) {
-      return idField;
-    }
-    
-    // Konversi ke string sebagai fallback terakhir
-    String convertedId = idField.toString();
-    print('DEBUG Habit converted ID: $convertedId');
-    
-    // Pastikan bukan string kosong atau "null"
-    if (convertedId.isNotEmpty && convertedId != "null") {
-      return convertedId;
-    }
-    
-    return null;
-  }
-
-  // Fungsi untuk parsing tanggal dari format yang dikirim controller
-  static DateTime? _parseDate(dynamic dateField) {
-    if (dateField == null) return null;
-    
-    print('DEBUG Habit _parseDate: $dateField (${dateField.runtimeType})');
-    
-    try {
-      // Jika berupa string ISO format
-      if (dateField is String) {
-        DateTime parsedDate = DateTime.parse(dateField);
-        print('DEBUG Habit parsed date from string: $parsedDate');
-        return parsedDate;
+      
+      // Final validation
+      if (extractedId == null || 
+          extractedId.isEmpty || 
+          extractedId == 'null' ||
+          extractedId.trim().isEmpty) {
+        print('WARNING: No valid ID found, using null');
+        extractedId = null;
+      } else {
+        print('DEBUG: Final extracted ID: "$extractedId"');
       }
       
-      // Jika berupa Map dengan format {'$date': 'iso_string'}
-      if (dateField is Map && dateField.containsKey('\$date')) {
-        DateTime parsedDate = DateTime.parse(dateField['\$date']);
-        print('DEBUG Habit parsed date from \$date: $parsedDate');
-        return parsedDate;
+      // Parse dates safely
+      DateTime? parseDate(dynamic dateField) {
+        if (dateField == null) return null;
+        
+        try {
+          if (dateField is Map && dateField.containsKey('\$date')) {
+            // MongoDB date format: {"\$date": "2025-05-31T04:50:37.935Z"}
+            final dateStr = dateField['\$date'];
+            if (dateStr is String && dateStr.isNotEmpty) {
+              return DateTime.parse(dateStr);
+            }
+          } else if (dateField is String && dateField.isNotEmpty) {
+            return DateTime.parse(dateField);
+          } else if (dateField is DateTime) {
+            return dateField;
+          }
+        } catch (e) {
+          print('WARNING: Failed to parse date: $dateField, error: $e');
+        }
+        return null;
       }
       
-      return null;
-    } catch (e) {
-      print('ERROR Habit parsing date: $e, input: $dateField');
-      return null;
+      final habit = Habit(
+        id: extractedId,
+        title: json['title']?.toString() ?? '',
+        description: json['description']?.toString(),
+        category: json['category']?.toString() ?? 'regular_habit',
+        createdAt: parseDate(json['created_at']),
+        updatedAt: parseDate(json['updated_at']),
+      );
+      
+      print('DEBUG: Created habit: ${habit.id} - ${habit.title}');
+      return habit;
+      
+    } catch (e, stackTrace) {
+      print('ERROR in Habit.fromJson: $e');
+      print('ERROR stackTrace: $stackTrace');
+      print('ERROR problematic JSON: $json');
+      rethrow;
     }
   }
 
   Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    data['title'] = title;
-    if (description != null && description!.isNotEmpty) {
-      data['description'] = description;
-    }
-    data['category'] = category;
-    return data;
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'category': category,
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
   }
 
-  // Method untuk konversi ke format yang diharapkan API
+  // For API calls (exclude id for create operations)
   Map<String, dynamic> toApiJson() {
-    final data = <String, dynamic>{};
-    data['title'] = title.trim();
-    if (description != null && description!.trim().isNotEmpty) {
-      data['description'] = description!.trim();
-    }
-    data['category'] = category;
-    return data;
+    return {
+      'title': title,
+      'description': description,
+      'category': category,
+    };
   }
 
-  Habit copyWith({
-    String? id,
-    String? title,
-    String? description,
-    String? category,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
+  // Helper methods for validation
+  bool get hasValidId {
+    return id != null && 
+           id!.isNotEmpty && 
+           id != 'null' && 
+           id!.trim().isNotEmpty;
+  }
+
+  String? get safeId {
+    if (!hasValidId) return null;
+    return id!.trim();
+  }
+
+  // Create a copy with a new ID (useful for backend sync)
+  Habit copyWithId(String newId) {
     return Habit(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      description: description ?? this.description,
-      category: category ?? this.category,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      id: newId,
+      title: title,
+      description: description,
+      category: category,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 
@@ -152,60 +194,8 @@ class Habit {
       other is Habit &&
           runtimeType == other.runtimeType &&
           id == other.id &&
-          title == other.title &&
-          description == other.description &&
-          category == other.category;
+          title == other.title;
 
   @override
-  int get hashCode =>
-      id.hashCode ^
-      title.hashCode ^
-      description.hashCode ^
-      category.hashCode;
-}
-
-// lib/model/habit_stats.dart
-class HabitStats {
-  String habitId;
-  int totalActivities;
-  int completedActivities;
-  double completionRate;
-  int currentStreak;
-  int longestStreak;
-
-  HabitStats({
-    required this.habitId,
-    required this.totalActivities,
-    required this.completedActivities,
-    required this.completionRate,
-    required this.currentStreak,
-    required this.longestStreak,
-  });
-
-  factory HabitStats.fromJson(Map<String, dynamic> json) {
-    return HabitStats(
-      habitId: json['habitId'] ?? '',
-      totalActivities: json['totalActivities'] ?? 0,
-      completedActivities: json['completedActivities'] ?? 0,
-      completionRate: (json['completionRate'] ?? 0.0).toDouble(),
-      currentStreak: json['currentStreak'] ?? 0,
-      longestStreak: json['longestStreak'] ?? 0,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'habitId': habitId,
-      'totalActivities': totalActivities,
-      'completedActivities': completedActivities,
-      'completionRate': completionRate,
-      'currentStreak': currentStreak,
-      'longestStreak': longestStreak,
-    };
-  }
-
-  @override
-  String toString() {
-    return 'HabitStats{habitId: $habitId, totalActivities: $totalActivities, completedActivities: $completedActivities, completionRate: $completionRate%, currentStreak: $currentStreak, longestStreak: $longestStreak}';
-  }
+  int get hashCode => id.hashCode ^ title.hashCode;
 }
