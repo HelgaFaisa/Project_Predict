@@ -13,6 +13,7 @@ use MongoDB\BSON\ObjectId;
 use MongoDB\BSON\UTCDateTime;
 use Exception;
 use DateTime;
+use Illuminate\Support\Facades\Log;
 
 class HabitController extends Controller {
     private $db;
@@ -24,10 +25,23 @@ class HabitController extends Controller {
             $port = env('DB_PORT', '27017');
             $database = env('DB_DATABASE', 'prediksi_diabetes');
             
-            $client = new \MongoDB\Client("mongodb://{$host}:{$port}");
+            // Add authentication if needed
+            $username = env('DB_USERNAME');
+            $password = env('DB_PASSWORD');
+            
+            if ($username && $password) {
+                $client = new \MongoDB\Client("mongodb://{$username}:{$password}@{$host}:{$port}");
+            } else {
+                $client = new \MongoDB\Client("mongodb://{$host}:{$port}");
+            }
+            
             $this->db = $client->selectDatabase($database);
+            
+            // Test connection
+            $this->db->command(['ping' => 1]);
+            
         } catch (Exception $e) {
-            \Log::error('MongoDB Connection Error: ' . $e->getMessage());
+            Log::error('MongoDB Connection Error: ' . $e->getMessage());
             throw new Exception('Database connection failed: ' . $e->getMessage());
         }
     }
@@ -49,10 +63,10 @@ class HabitController extends Controller {
                     'target_value' => $document['target_value'] ?? 1,
                     'current_progress' => $document['current_progress'] ?? 0,
                     'is_completed' => $document['is_completed'] ?? false,
-                    'completion_date' => $document['completion_date'] ?? null,
-                    'created_at' => $document['created_at'] ?? null,
-                    'updated_at' => $document['updated_at'] ?? null,
-                    'last_reset_date' => $document['last_reset_date'] ?? null
+                    'completion_date' => $this->formatDate($document['completion_date'] ?? null),
+                    'created_at' => $this->formatDate($document['created_at'] ?? null),
+                    'updated_at' => $this->formatDate($document['updated_at'] ?? null),
+                    'last_reset_date' => $this->formatDate($document['last_reset_date'] ?? null)
                 ];
                 $habits[] = $habit;
             }
@@ -64,7 +78,7 @@ class HabitController extends Controller {
             ], 200);
             
         } catch (Exception $e) {
-            \Log::error('Error fetching habits: ' . $e->getMessage());
+            Log::error('Error fetching habits: ' . $e->getMessage());
             return response()->json([
                 'status' => 500,
                 'message' => 'Error fetching habits: ' . $e->getMessage()
@@ -76,7 +90,7 @@ class HabitController extends Controller {
     public function getHabitById(string $id): JsonResponse {
         try {
             // Validasi ObjectId format
-            if (!preg_match('/^[a-f\d]{24}$/i', $id)) {
+            if (!$this->isValidObjectId($id)) {
                 return response()->json([
                     'status' => 400,
                     'message' => 'Invalid habit ID format'
@@ -102,10 +116,10 @@ class HabitController extends Controller {
                 'target_value' => $document['target_value'] ?? 1,
                 'current_progress' => $document['current_progress'] ?? 0,
                 'is_completed' => $document['is_completed'] ?? false,
-                'completion_date' => $document['completion_date'] ?? null,
-                'created_at' => $document['created_at'] ?? null,
-                'updated_at' => $document['updated_at'] ?? null,
-                'last_reset_date' => $document['last_reset_date'] ?? null
+                'completion_date' => $this->formatDate($document['completion_date'] ?? null),
+                'created_at' => $this->formatDate($document['created_at'] ?? null),
+                'updated_at' => $this->formatDate($document['updated_at'] ?? null),
+                'last_reset_date' => $this->formatDate($document['last_reset_date'] ?? null)
             ];
             
             return response()->json([
@@ -115,7 +129,7 @@ class HabitController extends Controller {
             ], 200);
             
         } catch (Exception $e) {
-            \Log::error('Error fetching habit by ID: ' . $e->getMessage());
+            Log::error('Error fetching habit by ID: ' . $e->getMessage());
             return response()->json([
                 'status' => 500,
                 'message' => 'Error fetching habit: ' . $e->getMessage()
@@ -129,36 +143,37 @@ class HabitController extends Controller {
             // Validasi input
             $validatedData = $request->validate([
                 'title' => 'required|string|max:255',
-                'description' => 'nullable|string',
+                'description' => 'nullable|string|max:1000',
                 'category' => 'nullable|string|in:regular_habit,health,fitness,productivity,learning',
                 'target_type' => 'nullable|string|in:daily,weekly,monthly,yearly',
-                'target_value' => 'nullable|integer|min:1'
+                'target_value' => 'nullable|numeric|min:1'
             ]);
             
             $collection = $this->db->selectCollection('targets');
+            
+            $currentTime = new UTCDateTime();
             
             $habit = [
                 'title' => $validatedData['title'],
                 'description' => $validatedData['description'] ?? '',
                 'category' => $validatedData['category'] ?? 'regular_habit',
                 'target_type' => $validatedData['target_type'] ?? 'daily',
-                'target_value' => (int)($validatedData['target_value'] ?? 1),
-                'current_progress' => 0,
+                'target_value' => (float)($validatedData['target_value'] ?? 1),
+                'current_progress' => 0.0,
                 'is_completed' => false,
                 'completion_date' => null,
-                'created_at' => new UTCDateTime(),
-                'updated_at' => new UTCDateTime(),
-                'last_reset_date' => new UTCDateTime()
+                'created_at' => $currentTime,
+                'updated_at' => $currentTime,
+                'last_reset_date' => $currentTime
             ];
             
             $result = $collection->insertOne($habit);
             
             if ($result->getInsertedCount() > 0) {
                 $habit['_id'] = (string)$result->getInsertedId();
-                // Convert UTCDateTime to readable format for response
-                $habit['created_at'] = $habit['created_at']->toDateTime()->format('Y-m-d H:i:s');
-                $habit['updated_at'] = $habit['updated_at']->toDateTime()->format('Y-m-d H:i:s');
-                $habit['last_reset_date'] = $habit['last_reset_date']->toDateTime()->format('Y-m-d H:i:s');
+                $habit['created_at'] = $this->formatDate($habit['created_at']);
+                $habit['updated_at'] = $this->formatDate($habit['updated_at']);
+                $habit['last_reset_date'] = $this->formatDate($habit['last_reset_date']);
                 
                 return response()->json([
                     'status' => 201,
@@ -179,7 +194,7 @@ class HabitController extends Controller {
                 'errors' => $e->errors()
             ], 422);
         } catch (Exception $e) {
-            \Log::error('Error creating habit: ' . $e->getMessage());
+            Log::error('Error creating habit: ' . $e->getMessage());
             return response()->json([
                 'status' => 500,
                 'message' => 'Error creating habit: ' . $e->getMessage()
@@ -191,7 +206,7 @@ class HabitController extends Controller {
     public function updateHabit(Request $request, string $id): JsonResponse {
         try {
             // Validasi ObjectId format
-            if (!preg_match('/^[a-f\d]{24}$/i', $id)) {
+            if (!$this->isValidObjectId($id)) {
                 return response()->json([
                     'status' => 400,
                     'message' => 'Invalid habit ID format'
@@ -201,13 +216,22 @@ class HabitController extends Controller {
             // Validasi input
             $validatedData = $request->validate([
                 'title' => 'nullable|string|max:255',
-                'description' => 'nullable|string',
+                'description' => 'nullable|string|max:1000',
                 'category' => 'nullable|string|in:regular_habit,health,fitness,productivity,learning',
                 'target_type' => 'nullable|string|in:daily,weekly,monthly,yearly',
-                'target_value' => 'nullable|integer|min:1'
+                'target_value' => 'nullable|numeric|min:1'
             ]);
             
             $collection = $this->db->selectCollection('targets');
+            
+            // Check if habit exists first
+            $existingHabit = $collection->findOne(['_id' => new ObjectId($id)]);
+            if (!$existingHabit) {
+                return response()->json([
+                    'status' => 404,
+                    'message' => 'Habit not found'
+                ], 404);
+            }
             
             $updateData = [
                 'updated_at' => new UTCDateTime()
@@ -217,14 +241,14 @@ class HabitController extends Controller {
             if (isset($validatedData['description'])) $updateData['description'] = $validatedData['description'];
             if (isset($validatedData['category'])) $updateData['category'] = $validatedData['category'];
             if (isset($validatedData['target_type'])) $updateData['target_type'] = $validatedData['target_type'];
-            if (isset($validatedData['target_value'])) $updateData['target_value'] = (int)$validatedData['target_value'];
+            if (isset($validatedData['target_value'])) $updateData['target_value'] = (float)$validatedData['target_value'];
             
             $result = $collection->updateOne(
                 ['_id' => new ObjectId($id)],
                 ['$set' => $updateData]
             );
             
-            if ($result->getModifiedCount() > 0) {
+            if ($result->getModifiedCount() > 0 || $result->getMatchedCount() > 0) {
                 return response()->json([
                     'status' => 200,
                     'message' => 'Habit updated successfully'
@@ -232,7 +256,7 @@ class HabitController extends Controller {
             } else {
                 return response()->json([
                     'status' => 404,
-                    'message' => 'Habit not found or no changes made'
+                    'message' => 'Habit not found'
                 ], 404);
             }
             
@@ -243,7 +267,7 @@ class HabitController extends Controller {
                 'errors' => $e->errors()
             ], 422);
         } catch (Exception $e) {
-            \Log::error('Error updating habit: ' . $e->getMessage());
+            Log::error('Error updating habit: ' . $e->getMessage());
             return response()->json([
                 'status' => 500,
                 'message' => 'Error updating habit: ' . $e->getMessage()
@@ -255,7 +279,7 @@ class HabitController extends Controller {
     public function deleteHabit(string $id): JsonResponse {
         try {
             // Validasi ObjectId format
-            if (!preg_match('/^[a-f\d]{24}$/i', $id)) {
+            if (!$this->isValidObjectId($id)) {
                 return response()->json([
                     'status' => 400,
                     'message' => 'Invalid habit ID format'
@@ -278,7 +302,7 @@ class HabitController extends Controller {
             }
             
         } catch (Exception $e) {
-            \Log::error('Error deleting habit: ' . $e->getMessage());
+            Log::error('Error deleting habit: ' . $e->getMessage());
             return response()->json([
                 'status' => 500,
                 'message' => 'Error deleting habit: ' . $e->getMessage()
@@ -286,28 +310,155 @@ class HabitController extends Controller {
         }
     }
     
-    // UPDATE PROGRESS (INCREMENT) - Line 54 area
-    public function updateProgress(Request $request, string $id): JsonResponse {
+   // UPDATE PROGRESS (INCREMENT) - FIXED VERSION
+public function updateProgress(Request $request, string $id): JsonResponse {
+    try {
+        // Validasi ObjectId format
+        if (!$this->isValidObjectId($id)) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'Invalid habit ID format'
+            ], 400);
+        }
+        
+        // Validasi input increment
+        $increment = $request->input('increment', 1);
+        
+        // Handle both string and numeric input
+        if (is_string($increment)) {
+            $increment = (float)$increment;
+        }
+        
+        if (!is_numeric($increment) || $increment <= 0) {
+            return response()->json([
+                'status' => 400,
+                'message' => 'Increment must be a positive number'
+            ], 400);
+        }
+        
+        $collection = $this->db->selectCollection('targets');
+        
+        // Get current habit data with better error handling
+        $habit = $collection->findOne(['_id' => new ObjectId($id)]);
+        if (!$habit) {
+            return response()->json([
+                'status' => 404,
+                'message' => 'Habit not found'
+            ], 404);
+        }
+        
+        // PERBAIKAN UTAMA: Konversi MongoDB document dengan aman
+        $habitArray = [];
+        foreach ($habit as $key => $value) {
+            $habitArray[$key] = $value;
+        }
+        
+        // Alternative: Gunakan iterator_to_array jika tersedia
+        // $habitArray = iterator_to_array($habit);
+        
+        // Check if habit needs to be reset based on target_type
+        $needsReset = $this->checkIfNeedsReset($habitArray);
+        
+        $updateData = [];
+        $currentTime = new UTCDateTime();
+        
+        if ($needsReset) {
+            // Reset progress and update reset date
+            $updateData['current_progress'] = (float)$increment;
+            $updateData['last_reset_date'] = $currentTime;
+            $updateData['is_completed'] = false;
+            $updateData['completion_date'] = null;
+        } else {
+            // Increment progress safely
+            $currentProgress = isset($habitArray['current_progress']) ? (float)$habitArray['current_progress'] : 0.0;
+            $newProgress = $currentProgress + (float)$increment;
+            $updateData['current_progress'] = $newProgress;
+            
+            // Check if target is reached
+            $targetValue = isset($habitArray['target_value']) ? (float)$habitArray['target_value'] : 1.0;
+            if ($newProgress >= $targetValue) {
+                $updateData['is_completed'] = true;
+                $updateData['completion_date'] = $currentTime;
+            } else {
+                // Ensure is_completed is false if target not reached
+                $updateData['is_completed'] = false;
+                $updateData['completion_date'] = null;
+            }
+        }
+        
+        $updateData['updated_at'] = $currentTime;
+        
+        // Perform update with better error handling
+        $result = $collection->updateOne(
+            ['_id' => new ObjectId($id)],
+            ['$set' => $updateData]
+        );
+        
+        if ($result->getMatchedCount() > 0) {
+            // Return updated habit data
+            $updatedHabit = $collection->findOne(['_id' => new ObjectId($id)]);
+            
+            if ($updatedHabit) {
+                $habitData = [
+                    '_id' => (string)$updatedHabit['_id'],
+                    'title' => $updatedHabit['title'] ?? '',
+                    'current_progress' => (float)($updatedHabit['current_progress'] ?? 0),
+                    'target_value' => (float)($updatedHabit['target_value'] ?? 1),
+                    'is_completed' => $updatedHabit['is_completed'] ?? false,
+                    'completion_date' => $this->formatDate($updatedHabit['completion_date'] ?? null),
+                    'updated_at' => $this->formatDate($updatedHabit['updated_at'] ?? null)
+                ];
+                
+                return response()->json([
+                    'status' => 200,
+                    'message' => 'Progress updated successfully',
+                    'data' => $habitData
+                ], 200);
+            }
+        }
+        
+        // If we reach here, something went wrong
+        return response()->json([
+            'status' => 500,
+            'message' => 'Failed to update progress'
+        ], 500);
+        
+    } catch (\MongoDB\Exception\InvalidArgumentException $e) {
+        Log::error('MongoDB Invalid Argument Error: ' . $e->getMessage());
+        return response()->json([
+            'status' => 400,
+            'message' => 'Invalid data provided'
+        ], 400);
+    } catch (\MongoDB\Driver\Exception\Exception $e) {
+        Log::error('MongoDB Driver Error: ' . $e->getMessage());
+        return response()->json([
+            'status' => 500,
+            'message' => 'Database operation failed'
+        ], 500);
+    } catch (Exception $e) {
+        Log::error('Error updating progress: ' . $e->getMessage());
+        Log::error('Stack trace: ' . $e->getTraceAsString());
+        return response()->json([
+            'status' => 500,
+            'message' => 'Error updating progress: ' . $e->getMessage()
+        ], 500);
+    }
+}
+ 
+    // MARK AS COMPLETED (CHECKLIST)
+    public function markAsCompleted(string $id): JsonResponse {
         try {
             // Validasi ObjectId format
-            if (!preg_match('/^[a-f\d]{24}$/i', $id)) {
+            if (!$this->isValidObjectId($id)) {
                 return response()->json([
                     'status' => 400,
                     'message' => 'Invalid habit ID format'
                 ], 400);
             }
             
-            $increment = (int)($request->input('increment', 1));
-            if ($increment <= 0) {
-                return response()->json([
-                    'status' => 400,
-                    'message' => 'Increment must be a positive number'
-                ], 400);
-            }
-            
             $collection = $this->db->selectCollection('targets');
             
-            // Get current habit data
+            // Get habit first to check target_value
             $habit = $collection->findOne(['_id' => new ObjectId($id)]);
             if (!$habit) {
                 return response()->json([
@@ -316,98 +467,13 @@ class HabitController extends Controller {
                 ], 404);
             }
             
-            // Convert to array for easier manipulation
-            $habitArray = $habit->toArray();
-            
-            // Check if habit needs to be reset based on target_type
-            $needsReset = $this->checkIfNeedsReset($habitArray);
-            
-            $updateData = [];
-            
-            if ($needsReset) {
-                // Reset progress and update reset date
-                $updateData['current_progress'] = $increment;
-                $updateData['last_reset_date'] = new UTCDateTime();
-                $updateData['is_completed'] = false;
-                $updateData['completion_date'] = null;
-            } else {
-                // Increment progress
-                $currentProgress = isset($habitArray['current_progress']) ? (int)$habitArray['current_progress'] : 0;
-                $newProgress = $currentProgress + $increment;
-                $updateData['current_progress'] = $newProgress;
-                
-                // Check if target is reached
-                $targetValue = isset($habitArray['target_value']) ? (int)$habitArray['target_value'] : 1;
-                if ($newProgress >= $targetValue) {
-                    $updateData['is_completed'] = true;
-                    $updateData['completion_date'] = new UTCDateTime();
-                }
-            }
-            
-            $updateData['updated_at'] = new UTCDateTime();
-            
-            $result = $collection->updateOne(
-                ['_id' => new ObjectId($id)],
-                ['$set' => $updateData]
-            );
-            
-            if ($result->getModifiedCount() > 0) {
-                // Return updated habit data
-                $updatedHabit = $collection->findOne(['_id' => new ObjectId($id)]);
-                $habitData = [
-                    '_id' => (string)$updatedHabit['_id'],
-                    'title' => $updatedHabit['title'] ?? '',
-                    'current_progress' => $updatedHabit['current_progress'] ?? 0,
-                    'target_value' => $updatedHabit['target_value'] ?? 1,
-                    'is_completed' => $updatedHabit['is_completed'] ?? false,
-                    'completion_date' => $updatedHabit['completion_date'] ?? null
-                ];
-                
-                return response()->json([
-                    'status' => 200,
-                    'message' => 'Progress updated successfully',
-                    'data' => $habitData
-                ], 200);
-            } else {
-                return response()->json([
-                    'status' => 500,
-                    'message' => 'Failed to update progress'
-                ], 500);
-            }
-            
-        } catch (Exception $e) {
-            \Log::error('Error updating progress: ' . $e->getMessage());
-            return response()->json([
-                'status' => 500,
-                'message' => 'Error updating progress: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-    
-    // MARK AS COMPLETED (CHECKLIST)
-    public function markAsCompleted(string $id): JsonResponse {
-        try {
-            // Validasi ObjectId format
-            if (!preg_match('/^[a-f\d]{24}$/i', $id)) {
-                return response()->json([
-                    'status' => 400,
-                    'message' => 'Invalid habit ID format'
-                ], 400);
-            }
-            
-            $collection = $this->db->selectCollection('targets');
-            
+            $currentTime = new UTCDateTime();
             $updateData = [
                 'is_completed' => true,
-                'completion_date' => new UTCDateTime(),
-                'updated_at' => new UTCDateTime()
+                'completion_date' => $currentTime,
+                'updated_at' => $currentTime,
+                'current_progress' => (float)($habit['target_value'] ?? 1)
             ];
-            
-            // Also set current_progress to target_value if not already
-            $habit = $collection->findOne(['_id' => new ObjectId($id)]);
-            if ($habit) {
-                $updateData['current_progress'] = $habit['target_value'] ?? 1;
-            }
             
             $result = $collection->updateOne(
                 ['_id' => new ObjectId($id)],
@@ -421,13 +487,13 @@ class HabitController extends Controller {
                 ], 200);
             } else {
                 return response()->json([
-                    'status' => 404,
-                    'message' => 'Habit not found'
-                ], 404);
+                    'status' => 500,
+                    'message' => 'Failed to mark habit as completed'
+                ], 500);
             }
             
         } catch (Exception $e) {
-            \Log::error('Error marking habit as completed: ' . $e->getMessage());
+            Log::error('Error marking habit as completed: ' . $e->getMessage());
             return response()->json([
                 'status' => 500,
                 'message' => 'Error marking habit as completed: ' . $e->getMessage()
@@ -439,7 +505,7 @@ class HabitController extends Controller {
     public function unmarkAsCompleted(string $id): JsonResponse {
         try {
             // Validasi ObjectId format
-            if (!preg_match('/^[a-f\d]{24}$/i', $id)) {
+            if (!$this->isValidObjectId($id)) {
                 return response()->json([
                     'status' => 400,
                     'message' => 'Invalid habit ID format'
@@ -447,6 +513,15 @@ class HabitController extends Controller {
             }
             
             $collection = $this->db->selectCollection('targets');
+            
+            // Check if habit exists
+            $habit = $collection->findOne(['_id' => new ObjectId($id)]);
+            if (!$habit) {
+                return response()->json([
+                    'status' => 404,
+                    'message' => 'Habit not found'
+                ], 404);
+            }
             
             $updateData = [
                 'is_completed' => false,
@@ -466,13 +541,13 @@ class HabitController extends Controller {
                 ], 200);
             } else {
                 return response()->json([
-                    'status' => 404,
-                    'message' => 'Habit not found'
-                ], 404);
+                    'status' => 500,
+                    'message' => 'Failed to unmark habit'
+                ], 500);
             }
             
         } catch (Exception $e) {
-            \Log::error('Error unmarking habit: ' . $e->getMessage());
+            Log::error('Error unmarking habit: ' . $e->getMessage());
             return response()->json([
                 'status' => 500,
                 'message' => 'Error unmarking habit: ' . $e->getMessage()
@@ -497,9 +572,9 @@ class HabitController extends Controller {
                     'target_value' => $document['target_value'] ?? 1,
                     'current_progress' => $document['current_progress'] ?? 0,
                     'is_completed' => $document['is_completed'] ?? false,
-                    'completion_date' => $document['completion_date'] ?? null,
-                    'created_at' => $document['created_at'] ?? null,
-                    'updated_at' => $document['updated_at'] ?? null
+                    'completion_date' => $this->formatDate($document['completion_date'] ?? null),
+                    'created_at' => $this->formatDate($document['created_at'] ?? null),
+                    'updated_at' => $this->formatDate($document['updated_at'] ?? null)
                 ];
                 $habits[] = $habit;
             }
@@ -511,7 +586,7 @@ class HabitController extends Controller {
             ], 200);
             
         } catch (Exception $e) {
-            \Log::error('Error fetching habits by category: ' . $e->getMessage());
+            Log::error('Error fetching habits by category: ' . $e->getMessage());
             return response()->json([
                 'status' => 500,
                 'message' => 'Error fetching habits by category: ' . $e->getMessage()
@@ -535,9 +610,9 @@ class HabitController extends Controller {
                     'target_type' => $document['target_type'] ?? 'daily',
                     'target_value' => $document['target_value'] ?? 1,
                     'current_progress' => $document['current_progress'] ?? 0,
-                    'completion_date' => $document['completion_date'] ?? null,
-                    'created_at' => $document['created_at'] ?? null,
-                    'updated_at' => $document['updated_at'] ?? null
+                    'completion_date' => $this->formatDate($document['completion_date'] ?? null),
+                    'created_at' => $this->formatDate($document['created_at'] ?? null),
+                    'updated_at' => $this->formatDate($document['updated_at'] ?? null)
                 ];
                 $habits[] = $habit;
             }
@@ -549,7 +624,7 @@ class HabitController extends Controller {
             ], 200);
             
         } catch (Exception $e) {
-            \Log::error('Error fetching completed habits: ' . $e->getMessage());
+            Log::error('Error fetching completed habits: ' . $e->getMessage());
             return response()->json([
                 'status' => 500,
                 'message' => 'Error fetching completed habits: ' . $e->getMessage()
@@ -562,14 +637,16 @@ class HabitController extends Controller {
         try {
             $collection = $this->db->selectCollection('targets');
             
+            $currentTime = new UTCDateTime();
+            
             $result = $collection->updateMany(
                 [],
                 ['$set' => [
-                    'current_progress' => 0,
+                    'current_progress' => 0.0,
                     'is_completed' => false,
                     'completion_date' => null,
-                    'last_reset_date' => new UTCDateTime(),
-                    'updated_at' => new UTCDateTime()
+                    'last_reset_date' => $currentTime,
+                    'updated_at' => $currentTime
                 ]]
             );
             
@@ -582,7 +659,7 @@ class HabitController extends Controller {
             ], 200);
             
         } catch (Exception $e) {
-            \Log::error('Error resetting habits: ' . $e->getMessage());
+            Log::error('Error resetting habits: ' . $e->getMessage());
             return response()->json([
                 'status' => 500,
                 'message' => 'Error resetting habits: ' . $e->getMessage()
@@ -590,7 +667,7 @@ class HabitController extends Controller {
         }
     }
     
-    // HELPER: Check if habit needs to be reset based on target_type - Line 256 area
+    // HELPER: Check if habit needs to be reset based on target_type - IMPROVED
     private function checkIfNeedsReset(array $habit): bool {
         try {
             $targetType = $habit['target_type'] ?? 'daily';
@@ -600,14 +677,11 @@ class HabitController extends Controller {
                 return false; // First time, no reset needed
             }
             
-            // Handle both UTCDateTime and regular DateTime objects
-            if ($lastResetDate instanceof UTCDateTime) {
-                $lastResetTimestamp = $lastResetDate->toDateTime();
-            } elseif ($lastResetDate instanceof DateTime) {
-                $lastResetTimestamp = $lastResetDate;
-            } else {
-                // If it's a string or other format, try to parse it
-                $lastResetTimestamp = new DateTime($lastResetDate);
+            // Handle different date formats more robustly
+            $lastResetTimestamp = $this->parseDate($lastResetDate);
+            if (!$lastResetTimestamp) {
+                Log::warning('Could not parse last_reset_date, skipping reset check');
+                return false;
             }
             
             $now = new DateTime();
@@ -627,8 +701,42 @@ class HabitController extends Controller {
                     return false;
             }
         } catch (Exception $e) {
-            \Log::error('Error in checkIfNeedsReset: ' . $e->getMessage());
+            Log::error('Error in checkIfNeedsReset: ' . $e->getMessage());
             return false; // Default to no reset if there's an error
         }
+    }
+    
+    // HELPER: Validate ObjectId format
+    private function isValidObjectId(string $id): bool {
+        return preg_match('/^[a-f\d]{24}$/i', $id) === 1;
+    }
+    
+    // HELPER: Parse date from various formats
+    private function parseDate($date): ?DateTime {
+        if (!$date) {
+            return null;
+        }
+        
+        try {
+            if ($date instanceof UTCDateTime) {
+                return $date->toDateTime();
+            } elseif ($date instanceof DateTime) {
+                return $date;
+            } elseif (is_string($date)) {
+                return new DateTime($date);
+            } elseif (is_object($date) && method_exists($date, 'toDateTime')) {
+                return $date->toDateTime();
+            }
+        } catch (Exception $e) {
+            Log::warning('Failed to parse date: ' . $e->getMessage());
+        }
+        
+        return null;
+    }
+    
+    // HELPER: Format date for API response
+    private function formatDate($date): ?string {
+        $parsedDate = $this->parseDate($date);
+        return $parsedDate ? $parsedDate->format('Y-m-d H:i:s') : null;
     }
 }
