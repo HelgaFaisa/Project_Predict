@@ -145,7 +145,7 @@ class _GejalaPageState extends State<GejalaPage> with TickerProviderStateMixin {
     }
 
     _totalNilaiGejala = cfGlobal.clamp(-1, 1);
-    _hasilPerhitungan = 'Certainty Factor total: ${_totalNilaiGejala.toStringAsFixed(2)}';
+    _hasilPerhitungan = 'Total: ${_totalNilaiGejala.toStringAsFixed(2)}';
 
     _berikanSaran();
   }
