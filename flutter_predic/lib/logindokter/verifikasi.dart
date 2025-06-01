@@ -10,7 +10,7 @@ class VerifyResetCodeScreen extends StatefulWidget {
   State<VerifyResetCodeScreen> createState() => _VerifyResetCodeScreenState();
 }
 
-class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
+class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> with TickerProviderStateMixin {
   final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   
@@ -20,10 +20,44 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
   int _resendCountdown = 60;
   Timer? _timer;
 
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  // Enhanced color palette
+  static const Color primaryBlue = Color(0xFF42A5F5);
+  static const Color mediumBlue = Color(0xFF64B5F6);
+  static const Color softBlue = Color(0xFF90CAF9);
+  static const Color lightBlue = Color(0xFFBBDEFB);
+  static const Color veryLightBlue = Color(0xFFE3F2FD);
+
   @override
   void initState() {
     super.initState();
     _startResendTimer();
+    
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    ));
+    
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.3, 1.0, curve: Curves.easeOutCubic),
+    ));
+    
+    _animationController.forward();
   }
 
   @override
@@ -44,6 +78,7 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
       focusNode.dispose();
     }
     _timer?.cancel();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -133,11 +168,22 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Error'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red[400], size: 28),
+            const SizedBox(width: 12),
+            const Text('Error'),
+          ],
+        ),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: primaryBlue,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
             child: const Text('OK'),
           ),
         ],
@@ -149,11 +195,24 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Berhasil'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: Colors.green[400], size: 28),
+            const SizedBox(width: 12),
+            const Text('Berhasil'),
+          ],
+        ),
         content: Text(message),
         actions: [
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryBlue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
             child: const Text('OK'),
           ),
         ],
@@ -162,20 +221,39 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
   }
 
   Widget _buildCodeInput(int index) {
-    return Container(
+    final bool isFilled = _controllers[index].text.isNotEmpty;
+    final bool isFocused = _focusNodes[index].hasFocus;
+    
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
       width: 55,
       height: 65,
       decoration: BoxDecoration(
+        gradient: isFilled 
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [veryLightBlue, lightBlue.withOpacity(0.3)],
+              )
+            : null,
+        color: isFilled ? null : Colors.white,
         border: Border.all(
-          color: _controllers[index].text.isNotEmpty 
-              ? Colors.green[600]! 
-              : Colors.grey[300]!,
-          width: 2,
+          color: isFilled 
+              ? primaryBlue
+              : isFocused 
+                  ? mediumBlue
+                  : lightBlue.withOpacity(0.5),
+          width: isFilled || isFocused ? 2.5 : 1.5,
         ),
-        borderRadius: BorderRadius.circular(12),
-        color: _controllers[index].text.isNotEmpty 
-            ? Colors.green[50] 
-            : Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          if (isFilled || isFocused)
+            BoxShadow(
+              color: primaryBlue.withOpacity(0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+        ],
       ),
       child: TextFormField(
         controller: _controllers[index],
@@ -186,9 +264,10 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
           FilteringTextInputFormatter.digitsOnly,
           LengthLimitingTextInputFormatter(1),
         ],
-        style: const TextStyle(
-          fontSize: 24,
+        style: TextStyle(
+          fontSize: 28,
           fontWeight: FontWeight.bold,
+          color: isFilled ? primaryBlue : Colors.grey[600],
         ),
         decoration: const InputDecoration(
           border: InputBorder.none,
@@ -225,186 +304,317 @@ class _VerifyResetCodeScreenState extends State<VerifyResetCodeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Verifikasi Kode'),
-        backgroundColor: Colors.green[600],
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 32),
-              
-              // Icon
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.green[50],
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.mark_email_read,
-                  size: 60,
-                  color: Colors.green[600],
-                ),
-              ),
-              
-              const SizedBox(height: 32),
-              
-              // Title
-              Text(
-                'Verifikasi Email',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Subtitle
-              Text(
-                'Masukkan 6 digit kode verifikasi yang telah dikirim ke:',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              
-              const SizedBox(height: 8),
-              
-              // Email
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.green[50],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  _email,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.green[700],
-                    fontWeight: FontWeight.w600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              
-              const SizedBox(height: 40),
-              
-              // Code input fields
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(6, (index) => _buildCodeInput(index)),
-              ),
-              
-              const SizedBox(height: 40),
-              
-              // Verify button - UKURAN DIPERBESAR
-              Container(
-                height: 56, // Tinggi minimum untuk touch target
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _verifyCode,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[600],
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 18), // Padding diperbesar
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                    shadowColor: Colors.green[300],
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text(
-                          'Verifikasi Kode',
-                          style: TextStyle(
-                            fontSize: 18, // Font size diperbesar
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                ),
-              ),
-              
-              const SizedBox(height: 32),
-              
-              // Resend code section
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              veryLightBlue,
+              lightBlue.withOpacity(0.3),
+              Colors.white,
+            ],
+            stops: const [0.0, 0.4, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Tidak menerima kode? ',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 15,
+                    const SizedBox(height: 40),
+                    
+                    // Enhanced Icon with gradient background
+                    Center(
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [primaryBlue, mediumBlue],
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: primaryBlue.withOpacity(0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.mark_email_read_rounded,
+                          size: 60,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: _canResend && !_isLoading ? _resendCode : null,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: _canResend ? Colors.green[50] : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(6),
+                    
+                    const SizedBox(height: 40),
+                    
+                    // Enhanced Title
+                    Text(
+                      'Verifikasi Email',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF1A237E),
+                        letterSpacing: -0.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Enhanced Subtitle
+                    Text(
+                      'Masukkan 6 digit kode verifikasi yang telah\ndikirim ke email Anda',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Colors.grey[600],
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Enhanced Email display
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            veryLightBlue,
+                            lightBlue.withOpacity(0.3),
+                          ],
                         ),
-                        child: Text(
-                          _canResend 
-                              ? 'Kirim Ulang' 
-                              : 'Kirim Ulang ($_resendCountdown)',
-                          style: TextStyle(
-                            color: _canResend ? Colors.green[700] : Colors.grey[400],
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: lightBlue.withOpacity(0.3)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryBlue.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.email_rounded, color: primaryBlue, size: 20),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              _email,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: primaryBlue,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 50),
+                    
+                    // Enhanced Code input fields
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: List.generate(6, (index) => _buildCodeInput(index)),
+                    ),
+                    
+                    const SizedBox(height: 50),
+                    
+                    // Enhanced Verify button with gradient
+                    Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: _isLoading 
+                            ? [Colors.grey[300]!, Colors.grey[400]!]
+                            : [primaryBlue, mediumBlue],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: _isLoading ? [] : [
+                          BoxShadow(
+                            color: primaryBlue.withOpacity(0.4),
+                            blurRadius: 15,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _verifyCode,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
                         ),
+                        child: _isLoading
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Text(
+                                    'Memverifikasi...',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.verified_user_rounded, color: Colors.white),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Verifikasi Kode',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
                       ),
                     ),
+                    
+                    const SizedBox(height: 40),
+                    
+                    // Enhanced Resend code section
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Tidak menerima kode? ',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 15,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: _canResend && !_isLoading ? _resendCode : null,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                gradient: _canResend 
+                                    ? LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [veryLightBlue, lightBlue.withOpacity(0.3)],
+                                      )
+                                    : null,
+                                color: _canResend ? null : Colors.grey[100],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: _canResend ? primaryBlue.withOpacity(0.3) : Colors.grey[300]!,
+                                ),
+                                boxShadow: _canResend ? [
+                                  BoxShadow(
+                                    color: primaryBlue.withOpacity(0.1),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ] : [],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _canResend ? Icons.refresh_rounded : Icons.timer_rounded,
+                                    color: _canResend ? primaryBlue : Colors.grey[400],
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _canResend 
+                                        ? 'Kirim Ulang' 
+                                        : 'Kirim Ulang ($_resendCountdown)',
+                                    style: TextStyle(
+                                      color: _canResend ? primaryBlue : Colors.grey[400],
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const Spacer(),
+                    
+                    // Enhanced Back button
+                    Container(
+                      height: 48,
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          foregroundColor: primaryBlue,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: lightBlue.withOpacity(0.3)),
+                          ),
+                          backgroundColor: veryLightBlue.withOpacity(0.3),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.arrow_back_rounded, color: primaryBlue, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Kembali',
+                              style: TextStyle(
+                                color: primaryBlue,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
-              
-              const Spacer(),
-              
-              // Back button - UKURAN DIPERBESAR
-              Container(
-                height: 48, // Tinggi minimum untuk touch target
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    'Kembali',
-                    style: TextStyle(
-                      color: Colors.green[700],
-                      fontWeight: FontWeight.w500,
-                      fontSize: 16, // Font size diperbesar
-                    ),
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-            ],
+            ),
           ),
         ),
       ),

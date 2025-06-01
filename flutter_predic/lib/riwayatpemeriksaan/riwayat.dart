@@ -13,16 +13,16 @@ class RiwayatPage extends StatefulWidget {
 class _RiwayatPageState extends State<RiwayatPage> {
   late Future<List<PrediksiRiwayat>> _riwayatFuture;
 
-  // Define gradient colors for app theme - matching the screenshot
+  // Define gradient colors for app theme - matching the reference blue color
   final LinearGradient _appGradient = const LinearGradient(
-    colors: [Color(0xFF0A4AA0), Color(0xFF1465D1), Color(0xFF2E8FE3)],
+    colors: [Color.fromARGB(255, 23, 139, 234), Color.fromARGB(255, 10, 108, 195), Color.fromARGB(255, 6, 79, 153)], // Matching reference blue
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   // Lighter gradient for content backgrounds
   final LinearGradient _cardGradient = const LinearGradient(
-    colors: [Color(0xFFFAFAFA), Color(0xFFD6E9F8)],
+    colors: [Color(0xFFFAFAFA), Color(0xFFE3F2FD)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -42,150 +42,201 @@ class _RiwayatPageState extends State<RiwayatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        flexibleSpace: Container(
-          decoration: BoxDecoration(gradient: _appGradient),
+      extendBodyBehindAppBar: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120), // Increased height for better curve
+        child: Container(
+          padding: const EdgeInsets.only(top: 20),
+          decoration: BoxDecoration(
+            gradient: _appGradient,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(40), // Increased curve radius
+              bottomRight: Radius.circular(40),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3), // Stronger shadow
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: const Color(0xFF1976D2).withOpacity(0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: AppBar(
+            toolbarHeight: 120,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            title: null,
+            leading: null,
+            flexibleSpace: const Padding(
+              padding: EdgeInsets.only(top: 35, left: 80),
+              child: Text('Riwayat Pemeriksaan',
+                  style: TextStyle(
+                    color: Colors.white, 
+                    fontWeight: FontWeight.w900, // Extra bold
+                    fontSize: 24, // Slightly larger
+                    letterSpacing: 1.0, // More spacing
+                    shadows: [
+                      Shadow(
+                        offset: Offset(0, 2),
+                        blurRadius: 4,
+                        color: Colors.black38, // Stronger shadow
+                      ),
+                      Shadow(
+                        offset: Offset(0, 1),
+                        blurRadius: 8,
+                        color: Colors.black26,
+                      ),
+                    ],
+                  )),
+            ),
+          ),
         ),
-        title: const Text('Riwayat Pemeriksaan',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        elevation: 0,
       ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [const Color(0xFF0A4AA0), const Color(0xFF5EABF3)],
+            colors: [const Color(0xFF42A5F5), const Color(0xFFBBDEFB)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
-        child: FutureBuilder<List<PrediksiRiwayat>>(
-          future: _riwayatFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1976D2)),
-                ),
-              );
-            } else if (snapshot.hasError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
-                    const SizedBox(height: 16),
-                    Text('Error: ${snapshot.error}',
-                        style: const TextStyle(color: Color(0xFF0D47A1))),
-                  ],
-                ),
-              );
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.history, size: 60, color: Colors.blue[300]),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Belum ada riwayat pemeriksaan.',
-                      style: TextStyle(
-                          color: Color(0xFF0D47A1),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
-              );
-            } else {
-              return ListView.builder(
-                padding: const EdgeInsets.all(16.0),
-                itemCount: snapshot.data!.length,
-                itemBuilder: (context, index) {
-                  final riwayat = snapshot.data![index];
-                  return Card(
-                    elevation: 4,
-                    margin: const EdgeInsets.only(bottom: 16.0),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: _cardGradient,
+        child: Padding(
+          padding: const EdgeInsets.only(top: 140), // Adjust for new AppBar height
+          child: FutureBuilder<List<PrediksiRiwayat>>(
+            future: _riwayatFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF64B5F6)),
+                  ),
+                );
+              } else if (snapshot.hasError) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
+                      const SizedBox(height: 16),
+                      Text('Error: ${snapshot.error}',
+                          style: const TextStyle(color: Color(0xFF42A5F5))),
+                    ],
+                  ),
+                );
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.history, size: 60, color: const Color(0xFF90CAF9)),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Belum ada riwayat pemeriksaan.',
+                        style: TextStyle(
+                            color: Color(0xFF42A5F5),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                );
+              } else {
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: snapshot.data!.length,
+                  itemBuilder: (context, index) {
+                    final riwayat = snapshot.data![index];
+                    return Card(
+                      elevation: 4,
+                      margin: const EdgeInsets.only(bottom: 16.0),
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () {
-                          _showDetailDialog(context, riwayat);
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.calendar_today,
-                                      color: Color(0xFF0D47A1), size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Tanggal: ${formatDate(riwayat.predictionTimestamp ?? riwayat.createdAt)}',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: Color(0xFF0D47A1)),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  const Text('Hasil Prediksi: ',
-                                      style: TextStyle(
-                                          fontSize: 15,
-                                          color: Color(0xFF1976D2),
-                                          fontWeight: FontWeight.w500)),
-                                  const SizedBox(width: 4),
-                                  _buildPredictionResult(
-                                      riwayat.predictionResult ?? riwayat.result),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: ElevatedButton(
-                                  onPressed: () =>
-                                      _showDetailDialog(context, riwayat),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF1976D2),
-                                    foregroundColor: Colors.white,
-                                    elevation: 2,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: _cardGradient,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () {
+                            _showDetailDialog(context, riwayat);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.calendar_today,
+                                        color: Color(0xFF42A5F5), size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Tanggal: ${formatDate(riwayat.predictionTimestamp ?? riwayat.createdAt)}',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: Color(0xFF42A5F5)),
                                     ),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text('Lihat Detail'),
-                                      SizedBox(width: 4),
-                                      Icon(Icons.arrow_forward, size: 16),
-                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    const Text('Hasil Prediksi: ',
+                                        style: TextStyle(
+                                            fontSize: 15,
+                                            color: Color(0xFF64B5F6),
+                                            fontWeight: FontWeight.w500)),
+                                    const SizedBox(width: 4),
+                                    _buildPredictionResult(
+                                        riwayat.predictionResult ?? riwayat.result),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: ElevatedButton(
+                                    onPressed: () =>
+                                        _showDetailDialog(context, riwayat),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF64B5F6),
+                                      foregroundColor: Colors.white,
+                                      elevation: 2,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 8),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text('Lihat Detail'),
+                                        SizedBox(width: 4),
+                                        Icon(Icons.arrow_forward, size: 16),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                },
-              );
-            }
-          },
+                    );
+                  },
+                );
+              }
+            },
+          ),
         ),
       ),
     );
@@ -249,7 +300,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.white, const Color(0xFFD6E9F8)],
+              colors: [Colors.white, const Color(0xFFE3F2FD)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -265,12 +316,12 @@ class _RiwayatPageState extends State<RiwayatPage> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1976D2).withOpacity(0.1),
+                      color: const Color(0xFF90CAF9).withOpacity(0.3),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
                       Icons.article_rounded,
-                      color: Color(0xFF0D47A1),
+                      color: Color(0xFF42A5F5),
                       size: 24,
                     ),
                   ),
@@ -280,7 +331,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF0D47A1),
+                      color: Color(0xFF42A5F5),
                     ),
                   ),
                 ],
@@ -296,9 +347,9 @@ class _RiwayatPageState extends State<RiwayatPage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Colors.blue.withOpacity(0.1),
-                      Colors.blue.withOpacity(0.5),
-                      Colors.blue.withOpacity(0.1),
+                      const Color(0xFF90CAF9).withOpacity(0.1),
+                      const Color(0xFF90CAF9).withOpacity(0.5),
+                      const Color(0xFF90CAF9).withOpacity(0.1),
                     ],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
@@ -308,10 +359,10 @@ class _RiwayatPageState extends State<RiwayatPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1976D2).withOpacity(0.05),
+                  color: const Color(0xFFE3F2FD).withOpacity(0.7),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: const Color(0xFF1976D2).withOpacity(0.2),
+                    color: const Color(0xFF90CAF9).withOpacity(0.5),
                   ),
                 ),
                 child: Column(
@@ -322,7 +373,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: Color(0xFF0D47A1),
+                        color: Color(0xFF42A5F5),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -349,7 +400,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
                 child: ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1976D2),
+                    backgroundColor: const Color(0xFF64B5F6),
                     foregroundColor: Colors.white,
                     elevation: 2,
                     shape: RoundedRectangleBorder(
@@ -390,7 +441,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
           Icon(
             icon,
             size: 18,
-            color: const Color(0xFF1976D2),
+            color: const Color(0xFF64B5F6),
           ),
           const SizedBox(width: 8),
           SizedBox(
@@ -399,7 +450,7 @@ class _RiwayatPageState extends State<RiwayatPage> {
               '$label:',
               style: const TextStyle(
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF1976D2),
+                color: Color(0xFF64B5F6),
               ),
             ),
           ),

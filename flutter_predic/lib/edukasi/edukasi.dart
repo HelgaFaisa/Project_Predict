@@ -12,24 +12,22 @@ class _EdukasiPageState extends State<EdukasiPage> {
   bool isLoading = true;
   String errorMessage = '';
 
-  // Enhanced blue gradient palette
+  // Enhanced soft blue gradient palette
   final LinearGradient appBarGradient = LinearGradient(
-    colors: [
-      Color(0xFF0D47A1),      // Deep blue
-      Color(0xFF1565C0),      // Rich blue
-    ],
+    colors: [Color.fromARGB(255, 23, 139, 234), Color.fromARGB(255, 10, 108, 195), Color.fromARGB(255, 6, 79, 153)],
+    stops: [0.0, 0.5, 1.0],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  // Main background gradient - three-tier blue gradient (tua, setengah muda, muda)
+  // Main background gradient - softer blue tones (very gentle progression)
   final LinearGradient backgroundGradient = LinearGradient(
     colors: [
-      Color.fromARGB(255, 103, 159, 243),      // Deep blue (biru tua)
-      Color.fromARGB(255, 144, 192, 241),      // Medium blue (setengah muda)
-      Color.fromARGB(255, 181, 217, 246),      // Light blue (biru muda)
+      Color.fromARGB(255, 80, 167, 239),      // Biru soft (lightest)
+      Color.fromARGB(255, 124, 194, 252),      // Biru muda lembut (very light)
+      Color.fromARGB(255, 183, 217, 242),      // Biru sangat muda (almost white)
     ],
-    stops: [0.0, 0.5, 1.0],
+    stops: [0.0, 0.6, 1.0],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
@@ -37,7 +35,7 @@ class _EdukasiPageState extends State<EdukasiPage> {
   final LinearGradient cardGradient = LinearGradient(
     colors: [
       Colors.white,
-      Color(0xFFE1F5FE),      // Light blue 50
+      Color(0xFFE3F2FD),      // Biru sangat muda
     ],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -45,8 +43,8 @@ class _EdukasiPageState extends State<EdukasiPage> {
 
   final LinearGradient fabGradient = LinearGradient(
     colors: [
-      Color(0xFF1976D2),      // Primary blue
-      Color(0xFF0D47A1),      // Darker blue
+      Color(0xFF64B5F6),      // Biru medium soft
+      Color(0xFF42A5F5),      // Biru lembut
     ],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -153,67 +151,71 @@ class _EdukasiPageState extends State<EdukasiPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: Text(
-          'Artikel Edukasi',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-            shadows: [
-              Shadow(
-                offset: Offset(1, 1),
-                blurRadius: 3.0,
-                color: Colors.black.withOpacity(0.3),
-              ),
-            ]
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-                  flexibleSpace: Container(
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(80.0),
+        child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                Color(0xFF0D47A1),     // Biru Sangat Gelap
-                Color(0xFF1976D2),     // Biru Medium
-                Color(0xFF42A5F5),     // Biru Muda
-              ],
+              colors: [Color.fromARGB(255, 23, 139, 234), Color.fromARGB(255, 10, 108, 195), Color.fromARGB(255, 6, 79, 153)],
               stops: [0.0, 0.5, 1.0],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withOpacity(0.1),
                 spreadRadius: 0,
                 blurRadius: 10,
                 offset: Offset(0, 3),
               ),
             ],
           ),
-        ),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.search, color: Colors.white),
-            onPressed: () {
-              // Implementasi pencarian
-            },
+          child: AppBar(
+            title: Text(
+              'Artikel Edukasi',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
+                shadows: [
+                  Shadow(
+                    offset: Offset(1, 1),
+                    blurRadius: 3.0,
+                    color: Colors.black.withOpacity(0.2),
+                  ),
+                ]
+              ),
+            ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            centerTitle: true,
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back_ios_new, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(Icons.search, color: Colors.white),
+                onPressed: () {
+                  // Implementasi pencarian
+                },
+              ),
+            ],
           ),
-        ],
+        ),
       ),
       body: Container(
         decoration: BoxDecoration(
-          gradient: backgroundGradient, // Menggunakan gradien tiga tingkat (tua, setengah muda, muda)
+          gradient: backgroundGradient,
         ),
         child: RefreshIndicator(
           onRefresh: loadEdukasi,
-          color: Colors.white,
-          backgroundColor: Color(0xFF1976D2),
+          color: Color(0xFF42A5F5),
+          backgroundColor: Colors.white,
           child: isLoading
               ? Center(
                   child: Column(
@@ -223,7 +225,7 @@ class _EdukasiPageState extends State<EdukasiPage> {
                         width: 50,
                         height: 50,
                         child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF42A5F5)),
                           strokeWidth: 3,
                         ),
                       ),
@@ -231,7 +233,7 @@ class _EdukasiPageState extends State<EdukasiPage> {
                       Text(
                         'Memuat artikel...',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Color(0xFF1976D2),
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
                         ),
@@ -246,23 +248,27 @@ class _EdukasiPageState extends State<EdukasiPage> {
                         children: [
                           Icon(
                             Icons.error_outline,
-                            color: Colors.white,
+                            color: Color(0xFF42A5F5),
                             size: 60,
                           ),
                           SizedBox(height: 16),
-                          Text(
-                            errorMessage,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 24),
+                            child: Text(
+                              errorMessage,
+                              style: TextStyle(
+                                color: Color(0xFF1976D2),
+                                fontSize: 16,
+                              ),
+                              textAlign: TextAlign.center,
+                              softWrap: true,
                             ),
-                            textAlign: TextAlign.center,
                           ),
                           SizedBox(height: 24),
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Color(0xFF1976D2),
+                              backgroundColor: Color(0xFF42A5F5),
+                              foregroundColor: Colors.white,
                               padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(30),
@@ -287,7 +293,7 @@ class _EdukasiPageState extends State<EdukasiPage> {
                             children: [
                               Icon(
                                 Icons.article_outlined,
-                                color: Colors.white.withOpacity(0.9),
+                                color: Color(0xFF64B5F6),
                                 size: 80,
                               ),
                               SizedBox(height: 16),
@@ -296,14 +302,15 @@ class _EdukasiPageState extends State<EdukasiPage> {
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.white,
+                                  color: Color(0xFF1976D2),
                                 ),
+                                textAlign: TextAlign.center,
                               ),
                             ],
                           ),
                         )
                       : ListView.builder(
-                          padding: EdgeInsets.only(top: 100, bottom: 20, left: 16, right: 16),
+                          padding: EdgeInsets.only(top: 110, bottom: 20, left: 16, right: 16),
                           itemCount: edukasiList.length,
                           itemBuilder: (context, index) {
                             final item = edukasiList[index];
@@ -314,228 +321,301 @@ class _EdukasiPageState extends State<EdukasiPage> {
                             final String tanggal = formatDate(item['created_at']);
 
                             return Padding(
-                              padding: EdgeInsets.only(bottom: 16),
-                              child: Stack(
-                                children: [
-                                  // Card dengan efek elevasi
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.2),
-                                          spreadRadius: 1,
-                                          blurRadius: 15,
-                                          offset: Offset(0, 5),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Card(
-                                      margin: EdgeInsets.zero,
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(16),
-                                          gradient: cardGradient,
-                                        ),
-                                        child: InkWell(
-                                          onTap: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) => ArtikelDetailPage(artikel: item),
+                              padding: EdgeInsets.only(bottom: 20),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  // Responsive card sizing
+                                  double cardHeight = constraints.maxWidth > 600 ? 400 : 320;
+                                  
+                                  return Container(
+                                    height: cardHeight,
+                                    child: Stack(
+                                      children: [
+                                        // Card dengan efek elevasi
+                                        Container(
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(20),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Color(0xFF42A5F5).withOpacity(0.15),
+                                                spreadRadius: 2,
+                                                blurRadius: 15,
+                                                offset: Offset(0, 5),
                                               ),
-                                            );
-                                          },
-                                          borderRadius: BorderRadius.circular(16),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              // Gambar dengan efek gradien overlay
-                                              if (gambarUrl != null && gambarUrl.isNotEmpty)
-                                                ClipRRect(
-                                                  borderRadius: BorderRadius.only(
-                                                    topLeft: Radius.circular(16),
-                                                    topRight: Radius.circular(16),
-                                                  ),
-                                                  child: Stack(
-                                                    children: [
-                                                      Container(
-                                                        height: 180,
-                                                        width: double.infinity,
-                                                        child: Image.network(
-                                                          gambarUrl,
-                                                          fit: BoxFit.cover,
-                                                          errorBuilder: (context, error, stackTrace) {
-                                                            return Container(
-                                                              height: 180,
-                                                              decoration: BoxDecoration(
-                                                                gradient: LinearGradient(
-                                                                  colors: [
-                                                                    Color(0xFFBBDEFB),
-                                                                    Color(0xFF90CAF9),
-                                                                  ],
-                                                                  begin: Alignment.topLeft,
-                                                                  end: Alignment.bottomRight,
-                                                                ),
+                                            ],
+                                          ),
+                                          child: Card(
+                                            margin: EdgeInsets.zero,
+                                            elevation: 0,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            child: Container(
+                                              height: cardHeight,
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(20),
+                                                gradient: cardGradient,
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  // Bagian yang clickable untuk membuka detail (gambar + konten utama)
+                                                  Expanded(
+                                                    child: InkWell(
+                                                      onTap: () {
+                                                        Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder: (context) => ArtikelDetailPage(artikel: item),
+                                                          ),
+                                                        );
+                                                      },
+                                                      borderRadius: BorderRadius.only(
+                                                        topLeft: Radius.circular(20),
+                                                        topRight: Radius.circular(20),
+                                                      ),
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          // Gambar dengan efek gradien overlay
+                                                          Expanded(
+                                                            flex: 3,
+                                                            child: gambarUrl != null && gambarUrl.isNotEmpty
+                                                                ? ClipRRect(
+                                                                    borderRadius: BorderRadius.only(
+                                                                      topLeft: Radius.circular(20),
+                                                                      topRight: Radius.circular(20),
+                                                                    ),
+                                                                    child: Stack(
+                                                                      children: [
+                                                                        Container(
+                                                                          width: double.infinity,
+                                                                          height: double.infinity,
+                                                                          child: Image.network(
+                                                                            gambarUrl,
+                                                                            fit: BoxFit.cover,
+                                                                            errorBuilder: (context, error, stackTrace) {
+                                                                              return Container(
+                                                                                decoration: BoxDecoration(
+                                                                                  gradient: LinearGradient(
+                                                                                    colors: [
+                                                                                      Color(0xFFBBDEFB),
+                                                                                      Color(0xFF90CAF9),
+                                                                                    ],
+                                                                                    begin: Alignment.topLeft,
+                                                                                    end: Alignment.bottomRight,
+                                                                                  ),
+                                                                                ),
+                                                                                child: Center(
+                                                                                  child: Icon(
+                                                                                    Icons.image_not_supported_outlined,
+                                                                                    color: Colors.white,
+                                                                                    size: 60,
+                                                                                  ),
+                                                                                ),
+                                                                              );
+                                                                            },
+                                                                          ),
+                                                                        ),
+                                                                        // Efek gradien yang lebih soft
+                                                                        Positioned(
+                                                                          bottom: 0,
+                                                                          left: 0,
+                                                                          right: 0,
+                                                                          child: Container(
+                                                                            height: 60,
+                                                                            decoration: BoxDecoration(
+                                                                              gradient: LinearGradient(
+                                                                                begin: Alignment.bottomCenter,
+                                                                                end: Alignment.topCenter,
+                                                                                colors: [
+                                                                                  Colors.black.withOpacity(0.3),
+                                                                                  Colors.transparent,
+                                                                                ],
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  )
+                                                                : Container(
+                                                                    decoration: BoxDecoration(
+                                                                      borderRadius: BorderRadius.only(
+                                                                        topLeft: Radius.circular(20),
+                                                                        topRight: Radius.circular(20),
+                                                                      ),
+                                                                      gradient: LinearGradient(
+                                                                        colors: [
+                                                                          Color(0xFFBBDEFB),
+                                                                          Color(0xFF90CAF9),
+                                                                        ],
+                                                                        begin: Alignment.topLeft,
+                                                                        end: Alignment.bottomRight,
+                                                                      ),
+                                                                    ),
+                                                                    child: Center(
+                                                                      child: Icon(
+                                                                        Icons.article_outlined,
+                                                                        color: Colors.white,
+                                                                        size: 60,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                          ),
+                                                          // Content section (tanpa button)
+                                                          Expanded(
+                                                            flex: 2,
+                                                            child: Padding(
+                                                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                                              child: Column(
+                                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                                children: [
+                                                                  // Title - Responsive font size
+                                                                  Flexible(
+                                                                    child: Text(
+                                                                      judul,
+                                                                      style: TextStyle(
+                                                                        fontSize: constraints.maxWidth > 600 ? 18 : 16,
+                                                                        fontWeight: FontWeight.bold,
+                                                                        color: Color(0xFF1976D2),
+                                                                        height: 1.2,
+                                                                      ),
+                                                                      maxLines: 2,
+                                                                      overflow: TextOverflow.ellipsis,
+                                                                    ),
+                                                                  ),
+                                                                  SizedBox(height: 8),
+                                                                  
+                                                                  // Date badge - More compact
+                                                                  Container(
+                                                                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                                    decoration: BoxDecoration(
+                                                                      gradient: LinearGradient(
+                                                                        colors: [
+                                                                          Color(0xFF90CAF9),
+                                                                          Color(0xFF64B5F6),
+                                                                        ],
+                                                                        begin: Alignment.centerLeft,
+                                                                        end: Alignment.centerRight,
+                                                                      ),
+                                                                      borderRadius: BorderRadius.circular(15),
+                                                                    ),
+                                                                    child: Row(
+                                                                      mainAxisSize: MainAxisSize.min,
+                                                                      children: [
+                                                                        Icon(
+                                                                          Icons.calendar_today,
+                                                                          size: 12,
+                                                                          color: Colors.white,
+                                                                        ),
+                                                                        SizedBox(width: 4),
+                                                                        Text(
+                                                                          tanggal,
+                                                                          style: TextStyle(
+                                                                            fontSize: 12,
+                                                                            color: Colors.white,
+                                                                            fontWeight: FontWeight.w500,
+                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                  
+                                                                  SizedBox(height: 8),
+                                                                  
+                                                                  // Content preview - Flexible
+                                                                  Expanded(
+                                                                    child: Text(
+                                                                      konten.length > 80
+                                                                          ? '${konten.substring(0, 80)}...'
+                                                                          : konten,
+                                                                      style: TextStyle(
+                                                                        fontSize: 13,
+                                                                        color: Colors.black87,
+                                                                        height: 1.4,
+                                                                      ),
+                                                                      maxLines: 2,
+                                                                      overflow: TextOverflow.ellipsis,
+                                                                    ),
+                                                                  ),
+                                                                ],
                                                               ),
-                                                              child: Center(
-                                                                child: Icon(
-                                                                  Icons.image_not_supported_outlined,
-                                                                  color: Colors.white,
-                                                                  size: 60,
-                                                                ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  
+                                                  // Button "Baca Selengkapnya" - Lebih compact
+                                                  Container(
+                                                    padding: EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                                                    child: Row(
+                                                      mainAxisAlignment: MainAxisAlignment.end,
+                                                      children: [
+                                                        GestureDetector(
+                                                          onTap: () {
+                                                            Navigator.push(
+                                                              context,
+                                                              MaterialPageRoute(
+                                                                builder: (context) => ArtikelDetailPage(artikel: item),
                                                               ),
                                                             );
                                                           },
-                                                        ),
-                                                      ),
-                                                      // Efek gradien
-                                                      Positioned(
-                                                        bottom: 0,
-                                                        left: 0,
-                                                        right: 0,
-                                                        child: Container(
-                                                          height: 80,
-                                                          decoration: BoxDecoration(
-                                                            gradient: LinearGradient(
-                                                              begin: Alignment.bottomCenter,
-                                                              end: Alignment.topCenter,
-                                                              colors: [
-                                                                Colors.black.withOpacity(0.7),
-                                                                Colors.transparent,
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              Padding(
-                                                padding: EdgeInsets.all(20),
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      judul,
-                                                      style: TextStyle(
-                                                        fontSize: 18,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Color(0xFF0D47A1),
-                                                        height: 1.3,
-                                                      ),
-                                                    ),
-                                                    SizedBox(height: 8),
-                                                    Container(
-                                                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                      decoration: BoxDecoration(
-                                                        gradient: LinearGradient(
-                                                          colors: [
-                                                            Color(0xFF64B5F6),
-                                                            Color(0xFF2196F3),
-                                                          ],
-                                                          begin: Alignment.centerLeft,
-                                                          end: Alignment.centerRight,
-                                                        ),
-                                                        borderRadius: BorderRadius.circular(20),
-                                                        boxShadow: [
-                                                          BoxShadow(
-                                                            color: Color(0xFF64B5F6).withOpacity(0.3),
-                                                            blurRadius: 8,
-                                                            offset: Offset(0, 2),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      child: Row(
-                                                        mainAxisSize: MainAxisSize.min,
-                                                        children: [
-                                                          Icon(
-                                                            Icons.calendar_today,
-                                                            size: 14,
-                                                            color: Colors.white,
-                                                          ),
-                                                          SizedBox(width: 6),
-                                                          Text(
-                                                            tanggal,
-                                                            style: TextStyle(
-                                                              fontSize: 12,
-                                                              color: Colors.white,
-                                                              fontWeight: FontWeight.w500,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    SizedBox(height: 16),
-                                                    Text(
-                                                      konten.length > 120
-                                                          ? '${konten.substring(0, 120)}...'
-                                                          : konten,
-                                                      style: TextStyle(
-                                                        fontSize: 14,
-                                                        color: Colors.black87,
-                                                        height: 1.5,
-                                                      ),
-                                                    ),
-                                                    SizedBox(height: 16),
-                                                    Row(
-                                                      mainAxisAlignment: MainAxisAlignment.end,
-                                                      children: [
-                                                        Container(
-                                                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                                          decoration: BoxDecoration(
-                                                            gradient: LinearGradient(
-                                                              colors: [
-                                                                Color(0xFF2196F3),
-                                                                Color(0xFF1976D2),
-                                                              ],
-                                                              begin: Alignment.centerLeft,
-                                                              end: Alignment.centerRight,
-                                                            ),
-                                                            borderRadius: BorderRadius.circular(30),
-                                                            boxShadow: [
-                                                              BoxShadow(
-                                                                color: Color(0xFF1976D2).withOpacity(0.3),
-                                                                blurRadius: 8,
-                                                                offset: Offset(0, 2),
+                                                          child: Container(
+                                                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                            decoration: BoxDecoration(
+                                                              gradient: LinearGradient(
+                                                                colors: [
+                                                                  Color(0xFF64B5F6),
+                                                                  Color(0xFF42A5F5),
+                                                                ],
+                                                                begin: Alignment.centerLeft,
+                                                                end: Alignment.centerRight,
                                                               ),
-                                                            ],
-                                                          ),
-                                                          child: Row(
-                                                            children: [
-                                                              Text(
-                                                                "Baca Selengkapnya",
-                                                                style: TextStyle(
-                                                                  color: Colors.white,
-                                                                  fontWeight: FontWeight.bold,
-                                                                  fontSize: 12,
+                                                              borderRadius: BorderRadius.circular(20),
+                                                              boxShadow: [
+                                                                BoxShadow(
+                                                                  color: Color(0xFF42A5F5).withOpacity(0.3),
+                                                                  blurRadius: 6,
+                                                                  offset: Offset(0, 2),
                                                                 ),
-                                                              ),
-                                                              SizedBox(width: 4),
-                                                              Icon(
-                                                                Icons.arrow_forward,
-                                                                color: Colors.white,
-                                                                size: 14,
-                                                              ),
-                                                            ],
+                                                              ],
+                                                            ),
+                                                            child: Row(
+                                                              mainAxisSize: MainAxisSize.min,
+                                                              children: [
+                                                                Text(
+                                                                  "Baca Selengkapnya",
+                                                                  style: TextStyle(
+                                                                    color: Colors.white,
+                                                                    fontWeight: FontWeight.bold,
+                                                                    fontSize: 12,
+                                                                  ),
+                                                                ),
+                                                                SizedBox(width: 4),
+                                                                Icon(
+                                                                  Icons.arrow_forward,
+                                                                  color: Colors.white,
+                                                                  size: 14,
+                                                                ),
+                                                              ],
+                                                            ),
                                                           ),
                                                         ),
                                                       ],
                                                     ),
-                                                  ],
-                                                ),
+                                                  ),
+                                                ],
                                               ),
-                                            ],
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                  ),
-                                ],
+                                  );
+                                },
                               ),
                             );
                           },
@@ -547,7 +627,7 @@ class _EdukasiPageState extends State<EdukasiPage> {
           borderRadius: BorderRadius.circular(50),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Color(0xFF42A5F5).withOpacity(0.3),
               spreadRadius: 1,
               blurRadius: 8,
               offset: Offset(0, 3),
