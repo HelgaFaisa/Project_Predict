@@ -1,22 +1,26 @@
-// File: gejala.dart (atau gejala_page.dart)
-// Widget untuk menampilkan dan berinteraksi dengan data Gejala - Design Cantik
-
 import 'package:flutter/material.dart';
 import 'dart:async';
-import '../model/gejala.dart';
-import '../api/gejala_api.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
+
+// Sesuaikan path import ini dengan struktur proyek Anda
+import '../model/gejala.dart'; 
+import '../api/gejala_api.dart';   
+import '../home_page.dart'; // Untuk CardContainer (asumsi ada di home_page.dart atau diimport olehnya)   
 
 enum JawabanGejala { ya, tidak, belum }
 
 class GejalaJawaban {
   final Gejala gejala;
   JawabanGejala jawaban;
-
   GejalaJawaban({required this.gejala, this.jawaban = JawabanGejala.belum});
 }
 
 class GejalaPage extends StatefulWidget {
+  // Jika GejalaPage membutuhkan userName (misalnya untuk EnhancedProfileHeader), 
+  // tambahkan di sini dan di constructor. Saat ini saya buat tanpa userName.
+  // final String userName;
+  // const GejalaPage({Key? key, required this.userName}) : super(key: key);
   const GejalaPage({Key? key}) : super(key: key);
 
   @override
@@ -29,19 +33,14 @@ class _GejalaPageState extends State<GejalaPage> with TickerProviderStateMixin {
   bool _isLoading = true;
   String _errorMessage = '';
 
-  // Untuk pull-to-refresh
-  final ScrollController _scrollController = ScrollController();
   final RefreshController _refreshController = RefreshController(initialRefresh: false);
-
-  // Timer untuk update otomatis
   Timer? _autoRefreshTimer;
-  final int _autoUpdateInterval = 5;
+  final int _autoUpdateInterval = 5; // dalam menit
 
   double _totalNilaiGejala = 0;
   String _saran = '';
   String _hasilPerhitungan = '';
 
-  // Animation controllers
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
@@ -50,36 +49,18 @@ class _GejalaPageState extends State<GejalaPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _fadeController = AnimationController(duration: const Duration(milliseconds: 700), vsync: this);
+    _slideController = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
     
-    // Initialize animations
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
-    );
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
 
     _loadData();
-    _autoRefreshTimer = Timer.periodic(
-      Duration(minutes: _autoUpdateInterval),
-      (_) => _refreshData()
-    );
+    _autoRefreshTimer = Timer.periodic(Duration(minutes: _autoUpdateInterval), (_) => _refreshData(showLoading: false));
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
     _refreshController.dispose();
     _autoRefreshTimer?.cancel();
     _fadeController.dispose();
@@ -87,545 +68,359 @@ class _GejalaPageState extends State<GejalaPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
+  Future<void> _loadData({bool showLoadingAnimation = true}) async {
+    if (showLoadingAnimation) {
+      if(mounted) setState(() => _isLoading = true);
+    }
+    if(mounted) _errorMessage = ''; 
 
     try {
       final gejalaList = await _gejalaApi.getAllGejala();
+      if (!mounted) return;
       setState(() {
         _gejalaJawabanList = gejalaList.map((gejala) => GejalaJawaban(gejala: gejala)).toList();
         _isLoading = false;
       });
-      
-      // Start animations after data loads
-      _fadeController.forward();
-      _slideController.forward();
+      _fadeController.forward(from: 0.0); // Reset dan jalankan animasi
+      _slideController.forward(from: 0.0);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _errorMessage = 'Gagal memuat data: $e';
+        _errorMessage = 'Gagal memuat data: ${e.toString()}';
         _isLoading = false;
       });
     }
   }
 
-  Future<void> _refreshData() async {
+  Future<void> _refreshData({bool showLoading = true}) async {
+    if(showLoading && mounted) _refreshController.requestRefresh(); 
+
     try {
-      final gejalaList = await _gejalaApi.refreshGejala();
+      final gejalaList = await _gejalaApi.refreshGejala(); 
+      if (!mounted) return;
       setState(() {
         _gejalaJawabanList = gejalaList.map((gejala) => GejalaJawaban(gejala: gejala)).toList();
         _errorMessage = '';
+        _totalNilaiGejala = 0;
+        _saran = '';
+        _hasilPerhitungan = '';
       });
-      _refreshController.refreshCompleted();
+      if(showLoading && mounted) _refreshController.refreshCompleted();
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Gagal memperbarui data: $e';
-      });
-      _refreshController.refreshFailed();
+      if (!mounted) return;
+      if(showLoading && mounted) _refreshController.refreshFailed();
+      if (mounted) { 
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal memperbarui data: $e', style: GoogleFonts.poppins()), backgroundColor: Colors.red)
+          );
+      }
     }
   }
 
   void _hitungNilaiGejala() {
     double cfGlobal = 0;
+    int answeredCount = _gejalaJawabanList.where((item) => item.jawaban != JawabanGejala.belum).length;
+
+    if (answeredCount < _gejalaJawabanList.length) {
+      if(mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Harap jawab semua pertanyaan gejala.', style: GoogleFonts.poppins()), backgroundColor: Colors.orangeAccent),
+        );
+      }
+      return;
+    }
 
     for (var item in _gejalaJawabanList) {
       double cf;
-
       if (item.jawaban == JawabanGejala.ya) {
         cf = item.gejala.mb - item.gejala.md;
       } else if (item.jawaban == JawabanGejala.tidak) {
-        cf = -item.gejala.md;
-      } else {
-        cf = 0;
+        cf = -(item.gejala.md * 0.5); 
+      } else { 
+        cf = 0; 
       }
-
-      cfGlobal = cfGlobal + cf * (1 - cfGlobal);
+      
+      if (cfGlobal == 0 && cf != 0) { 
+          cfGlobal = cf;
+      } else if (cfGlobal != 0 && cf != 0) { 
+          if (cfGlobal > 0 && cf > 0) {
+              cfGlobal = cfGlobal + cf * (1 - cfGlobal);
+          } else if (cfGlobal < 0 && cf < 0) {
+              cfGlobal = cfGlobal + cf * (1 + cfGlobal);
+          } else {
+              cfGlobal = (cfGlobal + cf) / (1 - (cfGlobal.abs() < cf.abs() ? cfGlobal.abs() : cf.abs()) );
+          }
+      }
     }
-
-    _totalNilaiGejala = cfGlobal.clamp(-1, 1);
-    _hasilPerhitungan = 'Total: ${_totalNilaiGejala.toStringAsFixed(2)}';
-
+    _totalNilaiGejala = cfGlobal.clamp(-1, 1); 
+    _hasilPerhitungan = 'Nilai Kepastian (CF): ${(_totalNilaiGejala * 100).toStringAsFixed(1)}%';
     _berikanSaran();
   }
 
   void _berikanSaran() {
-    if (_totalNilaiGejala >= 0.6) {
-      _saran = 'Risiko tinggi – segera periksa dokter.';
+    if (_totalNilaiGejala >= 0.8) {
+      _saran = 'Risiko Sangat Tinggi! Segera konsultasikan dengan dokter spesialis.';
+    } else if (_totalNilaiGejala >= 0.6) {
+      _saran = 'Risiko Tinggi. Dianjurkan untuk berkonsultasi dengan dokter.';
     } else if (_totalNilaiGejala >= 0.3) {
-      _saran = 'Risiko sedang – pertimbangkan konsultasi.';
+      _saran = 'Risiko Sedang. Pertimbangkan untuk konsultasi dan jaga pola hidup sehat.';
+    } else if (_totalNilaiGejala > 0){
+      _saran = 'Risiko Rendah. Tetap jaga kesehatan dan pantau gejala secara berkala.';
     } else {
-      _saran = 'Risiko rendah – tetap pantau kesehatan.';
+       _saran = 'Tidak ada indikasi risiko berdasarkan gejala yang dipilih. Tetap jaga kesehatan.';
     }
-    setState(() {});
+    if(mounted) setState(() {}); 
   }
 
   Color _getRiskColor() {
-    if (_totalNilaiGejala >= 0.6) {
-      return Colors.red;
-    } else if (_totalNilaiGejala >= 0.3) {
-      return Colors.orange;
-    } else {
-      return Colors.green;
-    }
+    if (_totalNilaiGejala >= 0.8) return Colors.red.shade700;
+    if (_totalNilaiGejala >= 0.6) return Colors.red.shade400;
+    if (_totalNilaiGejala >= 0.3) return Colors.orange.shade600;
+    if (_totalNilaiGejala > 0) return Colors.green.shade600;
+    return Colors.blue.shade600; 
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: Colors.blue[50], 
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF2C3E50),
-        title: const Text(
+        elevation: 1, 
+        backgroundColor: Colors.white, 
+        foregroundColor: Colors.blue.shade800, 
+        title: Text(
           'Pemeriksaan Gejala',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600, 
+            color: Colors.blue.shade800,
           ),
         ),
         actions: [
+          IconButton(
+            icon: Icon(Icons.refresh_rounded, color: Colors.blue.shade700),
+            onPressed: () => _refreshData(showLoading: true),
+            tooltip: 'Muat Ulang Data',
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Column( 
+        children: [
           Container(
-            margin: const EdgeInsets.only(right: 16),
+            width: double.infinity,
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             decoration: BoxDecoration(
-              color: const Color(0xFF3498DB).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade600, Colors.blue.shade400], 
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blue.withOpacity(0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: IconButton(
-              icon: const Icon(Icons.refresh_rounded, color: Color(0xFF3498DB)),
-              onPressed: _refreshData,
-              tooltip: 'Perbarui Data',
+            child: Column(
+              children: [
+                Icon(Icons.fact_check_outlined, color: Colors.white, size: 48), 
+                const SizedBox(height: 12),
+                Text(
+                  'Cek Risiko Diabetes',
+                  style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Jawab pertanyaan berikut sesuai dengan kondisi yang Anda rasakan saat ini.',
+                  style: GoogleFonts.poppins(color: Colors.white.withOpacity(0.9), fontSize: 14, height: 1.4),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          
+          Expanded(child: _buildGejalaList()),
+          
+          if (_hasilPerhitungan.isNotEmpty || _saran.isNotEmpty)
+            SlideTransition( 
+              position: _slideAnimation,
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(left:16, right:16, bottom: 16, top: 8),
+                  child: CardContainer( 
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        if (_hasilPerhitungan.isNotEmpty)
+                          _buildResultItem(
+                            icon: Icons.analytics_outlined,
+                            title: 'Hasil Perhitungan:',
+                            value: _hasilPerhitungan,
+                            valueColor: _getRiskColor(),
+                          ),
+                        if (_saran.isNotEmpty) ...[
+                           if(_hasilPerhitungan.isNotEmpty) const SizedBox(height: 12),
+                           _buildResultItem(
+                            icon: Icons.lightbulb_outline_rounded,
+                            title: 'Saran:',
+                            value: _saran,
+                            valueColor: _getRiskColor(),
+                            isSaran: true
+                          ),
+                        ]
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16,8,16,16), 
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.health_and_safety_outlined, size: 20),
+              label: Text('Periksa Gejala', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
+              onPressed: _hitungNilaiGejala,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green.shade600, 
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), 
+                elevation: 3,
+              ),
             ),
           ),
         ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header Section
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF3498DB), Color(0xFF2980B9)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF3498DB).withOpacity(0.3),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  const Icon(
-                    Icons.health_and_safety_outlined,
-                    color: Colors.white,
-                    size: 40,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Pemeriksaan Diabetes',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Jawab pertanyaan berikut untuk mengetahui risiko diabetes Anda',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 14,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-            
-            Expanded(child: _buildGejalaList()),
-            
-            // Action Button
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.all(16),
-              child: ElevatedButton(
-                onPressed: _hitungNilaiGejala,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF27AE60),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  elevation: 5,
-                  shadowColor: const Color(0xFF27AE60).withOpacity(0.3),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.analytics_outlined, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Periksa Gejala',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
-            // Results Section
-            if (_hasilPerhitungan.isNotEmpty || _saran.isNotEmpty)
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 500),
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    if (_hasilPerhitungan.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _getRiskColor().withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _getRiskColor().withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: _getRiskColor(),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.analytics,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                _hasilPerhitungan,
-                                style: TextStyle(
-                                  color: _getRiskColor(),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    if (_saran.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _getRiskColor().withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.lightbulb_outline,
-                              color: _getRiskColor(),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Saran:',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _saran,
-                                    style: TextStyle(
-                                      color: _getRiskColor(),
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
     );
   }
 
+  Widget _buildResultItem({required IconData icon, required String title, required String value, required Color valueColor, bool isSaran = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: Colors.blue.shade700, size: 20),
+            const SizedBox(width: 8),
+            Text(title, style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey.shade700, fontWeight: FontWeight.w500)),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            color: valueColor,
+            fontWeight: FontWeight.w600,
+            fontSize: isSaran ? 15 : 16, 
+            height: 1.4
+          ),
+        ),
+      ],
+    );
+  }
+
+
   Widget _buildGejalaList() {
     if (_isLoading) {
-      return Center(
+      return Center(child: Padding(
+        padding: const EdgeInsets.all(32.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3498DB)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Memuat data gejala...',
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 14,
-              ),
-            ),
+            CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600)),
+            const SizedBox(height: 20),
+            Text('Memuat data gejala...', style: GoogleFonts.poppins(color: Colors.grey.shade700, fontSize: 14)),
           ],
         ),
-      );
+      ));
     }
 
     if (_errorMessage.isNotEmpty) {
-      return Center(
-        child: Container(
-          margin: const EdgeInsets.all(20),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(50),
-                ),
-                child: const Icon(
-                  Icons.error_outline,
-                  color: Colors.red,
-                  size: 40,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _errorMessage,
-                style: const TextStyle(
-                  color: Colors.red,
-                  fontSize: 14,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _loadData,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3498DB),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('Coba Lagi'),
-              ),
-            ],
-          ),
-        ),
-      );
+      return Center(child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(Icons.error_outline_rounded, size: 50, color: Colors.red.shade300),
+          const SizedBox(height: 16),
+          Text(_errorMessage, style: GoogleFonts.poppins(color: Colors.red.shade700, fontSize: 15), textAlign: TextAlign.center),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.refresh_rounded),
+            label: Text('Coba Lagi', style: GoogleFonts.poppins()),
+            onPressed: () => _loadData(showLoadingAnimation: true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade600, foregroundColor: Colors.white),
+          )
+        ]),
+      ));
     }
 
     if (_gejalaJawabanList.isEmpty) {
-      return const Center(
-        child: Text(
-          'Tidak ada data gejala yang tersedia',
-          style: TextStyle(
-            color: Colors.grey,
-            fontSize: 16,
-          ),
-        ),
-      );
+      return Center(child: Text('Tidak ada data gejala.', style: GoogleFonts.poppins(color: Colors.grey.shade600, fontSize: 16)));
     }
 
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: SmartRefresher(
-          controller: _refreshController,
-          onRefresh: _refreshData,
-          header: const WaterDropMaterialHeader(
-            backgroundColor: Color(0xFF3498DB),
-            color: Colors.white,
-          ),
-          child: ListView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _gejalaJawabanList.length,
-            itemBuilder: (context, index) {
-              return TweenAnimationBuilder<double>(
-                duration: Duration(milliseconds: 300 + (index * 100)),
-                tween: Tween(begin: 0.0, end: 1.0),
-                builder: (context, value, child) {
-                  return Transform.translate(
-                    offset: Offset(0, 20 * (1 - value)),
-                    child: Opacity(
-                      opacity: value,
-                      child: _buildGejalaCard(_gejalaJawabanList[index], index),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
+    return SmartRefresher(
+      controller: _refreshController,
+      onRefresh: () => _refreshData(showLoading: true),
+      header: WaterDropHeader( 
+        waterDropColor: Colors.blue.shade600,
+        complete: Icon(Icons.check, color: Colors.blue.shade600),
+      ),
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), 
+        itemCount: _gejalaJawabanList.length,
+        itemBuilder: (context, index) {
+          return FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: Tween<Offset>(begin: Offset(0, 0.1 + (index * 0.02)), end: Offset.zero)
+                  .animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutQuart)),
+              child: _buildGejalaCard(_gejalaJawabanList[index], index),
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildGejalaCard(GejalaJawaban gejalaJawaban, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: CardContainer( 
+        padding: const EdgeInsets.all(16), 
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3498DB),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        gejalaJawaban.gejala.nama,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Color(0xFF2C3E50),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'MB: ${gejalaJawaban.gejala.mb.toStringAsFixed(2)} | MD: ${gejalaJawaban.gejala.md.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            Text(
+              gejalaJawaban.gejala.nama,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600, 
+                fontSize: 16,
+                color: Colors.black87, 
+              ),
             ),
+            // --- PERBAIKAN ERROR ADA DI SINI ---
+            if (gejalaJawaban.gejala.pertanyaan != null && gejalaJawaban.gejala.pertanyaan!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6.0, bottom: 4.0), // Tambah padding bawah sedikit
+                child: Text(
+                  gejalaJawaban.gejala.pertanyaan!, // Akses field yang sudah ada di model
+                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey.shade700, height: 1.4), // Disesuaikan stylenya
+                ),
+              ),
+            // --- AKHIR PERBAIKAN ERROR ---
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(
-                  child: _buildAnswerButton(
-                    'Ya',
-                    Icons.check_circle_outline,
-                    gejalaJawaban.jawaban == JawabanGejala.ya,
-                    const Color(0xFF27AE60),
-                    () => setState(() => gejalaJawaban.jawaban = JawabanGejala.ya),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildAnswerButton(
-                    'Tidak',
-                    Icons.cancel_outlined,
-                    gejalaJawaban.jawaban == JawabanGejala.tidak,
-                    const Color(0xFFE74C3C),
-                    () => setState(() => gejalaJawaban.jawaban = JawabanGejala.tidak),
-                  ),
-                ),
+                Expanded(child: _buildAnswerButton('Ya', Icons.check_circle_outline_rounded, gejalaJawaban.jawaban == JawabanGejala.ya, Colors.green.shade600, () => setState(() => gejalaJawaban.jawaban = JawabanGejala.ya))),
+                const SizedBox(width: 10), 
+                Expanded(child: _buildAnswerButton('Tidak', Icons.highlight_off_rounded, gejalaJawaban.jawaban == JawabanGejala.tidak, Colors.red.shade500, () => setState(() => gejalaJawaban.jawaban = JawabanGejala.tidak))),
               ],
             ),
           ],
@@ -634,45 +429,21 @@ class _GejalaPageState extends State<GejalaPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildAnswerButton(
-    String text,
-    IconData icon,
-    bool isSelected,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: BoxDecoration(
-          color: isSelected ? color : Colors.grey.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? color : Colors.grey.withOpacity(0.3),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? Colors.white : Colors.grey,
-              size: 18,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              text,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
+  Widget _buildAnswerButton(String text, IconData icon, bool isSelected, Color selectedColor, VoidCallback onTap) {
+    final color = isSelected ? selectedColor : Colors.grey.shade200; // Warna tombol tidak terpilih lebih soft
+    final textColor = isSelected ? Colors.white : Colors.black87;   // Teks hitam untuk tombol tidak terpilih
+
+    return ElevatedButton.icon(
+      icon: Icon(icon, size: 18, color: textColor),
+      label: Text(text, style: GoogleFonts.poppins(color: textColor, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal)),
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: textColor, 
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: isSelected ? 2 : 0,
+        side: !isSelected ? BorderSide(color: Colors.grey.shade300) : null, // Border tipis untuk tombol tidak terpilih
       ),
     );
   }

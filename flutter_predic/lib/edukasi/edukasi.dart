@@ -1,11 +1,20 @@
 // screens/education_list_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../model/edukasiartikel.dart';
-import '../api/edukasi_api.dart';
+import 'package:google_fonts/google_fonts.dart'; // DITAMBAHKAN
+import 'package:intl/intl.dart'; // DITAMBAHKAN untuk format tanggal yang lebih baik
+import 'ArtikelDetailPage.dart';
+import '../model/edukasiartikel.dart'; // Sesuaikan path jika perlu
+import '../api/edukasi_api.dart';   // Sesuaikan path jika perlu
+
+// Import untuk CardContainer dan EnhancedProfileHeader
+// Sesuaikan path jika file homepage.dart atau widget terpisah
+import '../home_page.dart'; // Asumsi CardContainer & EnhancedProfileHeader ada di sini atau diimport olehnya
 
 class EducationListScreen extends StatefulWidget {
-  const EducationListScreen({Key? key}) : super(key: key);
+  // DITAMBAHKAN: userName jika ingin menampilkan header profil
+  final String userName; 
+  const EducationListScreen({Key? key, required this.userName}) : super(key: key);
 
   @override
   State<EducationListScreen> createState() => _EducationListScreenState();
@@ -13,10 +22,10 @@ class EducationListScreen extends StatefulWidget {
 
 class _EducationListScreenState extends State<EducationListScreen> {
   List<EducationArticle> articles = [];
-  List<String> categories = [];
+  List<String> categories = []; // Ini akan berisi nama kategori dari API
   bool isLoading = true;
   bool isLoadingMore = false;
-  String? selectedCategory;
+  String? selectedCategory; // Ini akan menyimpan nama kategori yang dipilih
   String searchQuery = '';
   int currentPage = 1;
   bool hasMoreData = true;
@@ -34,14 +43,16 @@ class _EducationListScreenState extends State<EducationListScreen> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll); // Hapus listener dengan benar
     _scrollController.dispose();
     _searchController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels ==
-        _scrollController.position.maxScrollExtent) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) { // Trigger lebih awal
       if (hasMoreData && !isLoadingMore) {
         _loadMoreArticles();
       }
@@ -52,16 +63,30 @@ class _EducationListScreenState extends State<EducationListScreen> {
     setState(() {
       isLoading = true;
       errorMessage = null;
+      currentPage = 1; // Reset halaman
+      hasMoreData = true; // Asumsikan ada data lebih
+      articles.clear(); // Bersihkan artikel lama
     });
 
-    // Load categories
-    final categoriesResponse = await EducationService.getCategories();
-    if (categoriesResponse.success && categoriesResponse.data != null) {
-      categories = categoriesResponse.data!;
+    try {
+      final categoriesResponse = await EducationService.getCategories();
+      if (mounted && categoriesResponse.success && categoriesResponse.data != null) {
+        setState(() {
+          categories = List<String>.from(categoriesResponse.data!);
+        });
+      } else if (mounted && !categoriesResponse.success) {
+        // Handle error ambil kategori jika perlu, atau biarkan saja
+        print("Gagal memuat kategori: ${categoriesResponse.message}");
+      }
+      await _loadArticles(refresh: true); // refresh true akan membersihkan articles
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          errorMessage = "Terjadi kesalahan: $e";
+        });
+      }
     }
-
-    // Load articles
-    await _loadArticles(refresh: true);
   }
 
   Future<void> _loadArticles({bool refresh = false}) async {
@@ -69,126 +94,159 @@ class _EducationListScreenState extends State<EducationListScreen> {
       setState(() {
         currentPage = 1;
         hasMoreData = true;
-        articles.clear();
+        // articles.clear(); // Sudah dilakukan di _loadInitialData atau sebelum panggil ini
       });
     }
+    // Jika sedang loading atau tidak ada data lagi, jangan lakukan apa-apa
+    if (isLoading && !refresh || isLoadingMore && !refresh) return;
+
+    if(refresh) setState(() => isLoading = true);
+
 
     final response = await EducationService.getArticles(
       page: currentPage,
       perPage: 10,
-      category: selectedCategory,
+      category: selectedCategory, // Kirim nama kategori, bukan objek
       search: searchQuery.isNotEmpty ? searchQuery : null,
     );
+
+    if (!mounted) return;
 
     setState(() {
       isLoading = false;
       isLoadingMore = false;
-    });
 
-    if (response.success && response.data != null) {
-      setState(() {
+      if (response.success && response.data != null) {
         if (refresh) {
           articles = response.data!;
         } else {
           articles.addAll(response.data!);
         }
 
-        // Check if there's more data
         if (response.pagination != null) {
           hasMoreData = response.pagination!.currentPage < response.pagination!.lastPage;
         } else {
+          // Fallback jika info pagination tidak ada, anggap tidak ada data lagi jika return < perPage
           hasMoreData = response.data!.length >= 10;
         }
-
         errorMessage = null;
-      });
-    } else {
-      setState(() {
-        errorMessage = response.message;
-      });
-    }
+      } else {
+        errorMessage = response.message ?? "Gagal memuat artikel.";
+        // Jika refresh dan error, list artikel sudah dibersihkan
+        // Jika load more dan error, hasMoreData mungkin perlu di-set false agar tidak coba lagi
+        if (!refresh) hasMoreData = false; 
+      }
+    });
   }
 
   Future<void> _loadMoreArticles() async {
     if (isLoadingMore || !hasMoreData) return;
-
-    setState(() {
-      isLoadingMore = true;
-      currentPage++;
-    });
-
+    setState(() => isLoadingMore = true);
+    currentPage++;
     await _loadArticles();
   }
 
   void _onSearchChanged(String value) {
-    setState(() {
-      searchQuery = value;
-    });
+    setState(() => searchQuery = value);
     _debounceSearch();
   }
 
   Timer? _debounceTimer;
   void _debounceSearch() {
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+    _debounceTimer = Timer(const Duration(milliseconds: 600), () { // Durasi debounce
       _loadArticles(refresh: true);
     });
   }
 
   void _onCategorySelected(String? category) {
+    // Jika kategori yang dipilih adalah "Semua", set selectedCategory menjadi null
+    final newCategory = (category == 'Semua' || category == null) ? null : category;
+    if (selectedCategory == newCategory) return; // Tidak ada perubahan
+
     setState(() {
-      selectedCategory = category;
+      selectedCategory = newCategory;
     });
     _loadArticles(refresh: true);
   }
 
   Future<void> _refreshData() async {
+    _searchController.clear(); // Bersihkan search query saat refresh manual
+    setState(() {
+      searchQuery = '';
+      selectedCategory = null; // Reset kategori juga
+    });
     await _loadInitialData();
+  }
+
+  // Format tanggal yang lebih baik
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Tanggal tidak tersedia';
+    // Pastikan intl sudah diinisialisasi di main.dart
+    return DateFormat('d MMMM yyyy', 'id_ID').format(date);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Artikel Edukasi'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
+      backgroundColor: Colors.blue[50], // Latar belakang konsisten
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Profil
+          EnhancedProfileHeader(
+            userName: widget.userName,
+            onAvatarTap: () {
+              // Navigasi ke halaman profil
+            },
+          ),
+          // Judul Halaman
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                 Text(
+                  'Artikel Edukasi',
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.refresh_rounded, color: Colors.blue.shade700, size: 28),
+                  onPressed: _refreshData,
+                  tooltip: 'Muat Ulang Artikel',
+                )
+              ],
+            ),
+          ),
           // Search and Filter Section
           Container(
-            padding: const EdgeInsets.all(16.0),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            color: Colors.white, // Latar belakang putih untuk bagian filter
             child: Column(
               children: [
-                // Search Bar
                 TextField(
                   controller: _searchController,
                   onChanged: _onSearchChanged,
+                  style: GoogleFonts.poppins(color: Colors.black87),
                   decoration: InputDecoration(
                     hintText: 'Cari artikel...',
-                    hintStyle: TextStyle(color: Colors.grey[600]),
-                    prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+                    hintStyle: GoogleFonts.poppins(color: Colors.grey[500]),
+                    prefixIcon: Icon(Icons.search, color: Colors.grey[500]),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Colors.blue[50]?.withOpacity(0.5), // Warna field pencarian
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(25),
+                      borderRadius: BorderRadius.circular(12), // Dibuat lebih kotak
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   ),
                 ),
-                const SizedBox(height: 12),
-                // Category Filter
-                if (categories.isNotEmpty)
+                if (categories.isNotEmpty) ...[
+                  const SizedBox(height: 12),
                   SizedBox(
                     height: 40,
                     child: ListView(
@@ -200,6 +258,7 @@ class _EducationListScreenState extends State<EducationListScreen> {
                       ],
                     ),
                   ),
+                ]
               ],
             ),
           ),
@@ -218,44 +277,47 @@ class _EducationListScreenState extends State<EducationListScreen> {
       child: FilterChip(
         label: Text(
           label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey[700],
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          style: GoogleFonts.poppins( // Menggunakan GoogleFonts
+            color: isSelected ? Colors.white : Colors.blue.shade700,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
         selected: isSelected,
         onSelected: (selected) {
-          _onCategorySelected(selected ? (label == 'Semua' ? null : label) : null);
+          _onCategorySelected(selected ? label : null);
         },
-        selectedColor: Colors.white.withOpacity(0.2),
-        backgroundColor: Colors.white.withOpacity(0.1),
-        side: BorderSide(
-          color: isSelected ? Colors.white : Colors.white.withOpacity(0.3),
+        selectedColor: Colors.blue.shade600, // Warna saat terpilih
+        backgroundColor: Colors.blue.shade50, // Warna default
+        checkmarkColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: isSelected ? Colors.blue.shade600 : Colors.blue.shade200,
+          ),
         ),
       ),
     );
   }
 
   Widget _buildContent() {
-    if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+    if (isLoading && articles.isEmpty) { // Tampilkan loading hanya jika artikel kosong
+      return const Center(child: CircularProgressIndicator());
     }
 
-    if (errorMessage != null) {
+    if (errorMessage != null && articles.isEmpty) { // Tampilkan error hanya jika artikel kosong
       return _buildErrorWidget();
     }
 
-    if (articles.isEmpty) {
+    if (articles.isEmpty && !isLoading) { // Tampilkan empty state jika artikel kosong dan tidak loading
       return _buildEmptyWidget();
     }
 
     return RefreshIndicator(
       onRefresh: _refreshData,
+      color: Colors.blue.shade700,
       child: ListView.builder(
         controller: _scrollController,
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20), // Padding disesuaikan
         itemCount: articles.length + (isLoadingMore ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == articles.length) {
@@ -266,7 +328,6 @@ class _EducationListScreenState extends State<EducationListScreen> {
               ),
             );
           }
-
           return _buildArticleCard(articles[index]);
         },
       ),
@@ -276,35 +337,26 @@ class _EducationListScreenState extends State<EducationListScreen> {
   Widget _buildErrorWidget() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Terjadi Kesalahan',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.grey[600],
+        padding: const EdgeInsets.all(20.0),
+        child: CardContainer( // Menggunakan CardContainer
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline_rounded, size: 50, color: Colors.red.shade400),
+              const SizedBox(height: 16),
+              Text('Terjadi Kesalahan', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Text(errorMessage ?? 'Tidak dapat memuat data. Silakan coba lagi.', textAlign: TextAlign.center, style: GoogleFonts.poppins(color: Colors.grey[600])),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: _refreshData, // Diubah ke _refreshData agar filter juga direset
+                icon: const Icon(Icons.refresh_rounded),
+                label: Text('Coba Lagi', style: GoogleFonts.poppins()),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade600, foregroundColor: Colors.white),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              errorMessage ?? 'Tidak dapat memuat data',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _loadInitialData,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Coba Lagi'),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -313,196 +365,127 @@ class _EducationListScreenState extends State<EducationListScreen> {
   Widget _buildEmptyWidget() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.article_outlined,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Tidak Ada Artikel',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              searchQuery.isNotEmpty
-                  ? 'Tidak ada artikel yang cocok dengan pencarian "$searchQuery"'
-                  : 'Belum ada artikel yang tersedia',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-            if (searchQuery.isNotEmpty || selectedCategory != null) ...[
+        padding: const EdgeInsets.all(20.0),
+        child: CardContainer( // Menggunakan CardContainer
+            child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.article_outlined, size: 50, color: Colors.grey[400]),
               const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    searchQuery = '';
-                    selectedCategory = null;
-                    _searchController.clear();
-                  });
-                  _loadArticles(refresh: true);
-                },
-                icon: const Icon(Icons.clear),
-                label: const Text('Reset Filter'),
+              Text('Tidak Ada Artikel', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Text(
+                searchQuery.isNotEmpty
+                    ? 'Tidak ada artikel yang cocok dengan pencarian "$searchQuery".'
+                    : (selectedCategory != null ? 'Tidak ada artikel dalam kategori "$selectedCategory".' : 'Belum ada artikel yang tersedia.'),
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(color: Colors.grey[600]),
               ),
+              if (searchQuery.isNotEmpty || selectedCategory != null) ...[
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    _searchController.clear();
+                    _onCategorySelected(null); // Ini akan memanggil _loadArticles(refresh: true)
+                  },
+                  icon: const Icon(Icons.clear_all_rounded),
+                  label: Text('Reset Filter', style: GoogleFonts.poppins()),
+                   style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade300, foregroundColor: Colors.black87),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildArticleCard(EducationArticle article) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16.0),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () => _navigateToDetail(article),
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image
-            if (article.imageUrl != null && article.imageUrl!.isNotEmpty)
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                ),
-                child: Image.network(
-                  article.imageUrl!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      height: 200,
-                      color: Colors.grey[300],
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 200,
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: Icon(Icons.image_not_supported, size: 50),
-                    ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: CardContainer( // Menggunakan CardContainer
+        padding: EdgeInsets.zero, // Padding diatur manual di dalam
+        child: InkWell(
+          onTap: () => _navigateToDetail(article),
+          borderRadius: BorderRadius.circular(24), // Samakan dengan CardContainer
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (article.imageUrl != null && article.imageUrl!.isNotEmpty)
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+                  child: Image.network(
+                    article.imageUrl!,
+                    height: 180, // Tinggi gambar disesuaikan
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(height: 180, color: Colors.grey[200], child: const Center(child: CircularProgressIndicator()));
+                    },
+                    errorBuilder: (context, error, stackTrace) => Container(height: 180, color: Colors.grey[200], child: Center(child: Icon(Icons.broken_image_outlined, size: 50, color: Colors.grey[400]))),
                   ),
                 ),
-              ),
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Category and Date
-                  Row(
-                    children: [
-                      if (article.category != null && article.category!.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        if (article.category != null && article.category!.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.blue.shade200)),
+                            child: Text(article.category!, style: GoogleFonts.poppins(color: Colors.blue.shade700, fontSize: 11, fontWeight: FontWeight.w500)),
                           ),
-                          child: Text(
-                            article.category!,
-                            style: TextStyle(
-                              color: Theme.of(context).primaryColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      const Spacer(),
-                      if (article.publishedAt != null)
-                        Text(
-                          _formatDate(article.publishedAt!),
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // Title
-                  Text(
-                    article.title,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
+                        const Spacer(),
+                        if (article.publishedAt != null)
+                          Text(_formatDate(article.publishedAt!), style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 12)),
+                      ],
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  // Summary
-                  if (article.summary != null && article.summary!.isNotEmpty)
+                    const SizedBox(height: 8),
                     Text(
-                      article.summary!,
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        height: 1.4,
-                      ),
-                      maxLines: 3,
+                      article.title,
+                      style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, height: 1.3),
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  const SizedBox(height: 12),
-                  // Read More
-                  Row(
-                    children: [
+                    if (article.summary != null && article.summary!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
                       Text(
-                        'Baca Selengkapnya',
-                        style: TextStyle(
-                          color: Theme.of(context).primaryColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 12,
-                        color: Theme.of(context).primaryColor,
+                        article.summary!,
+                        style: GoogleFonts.poppins(color: Colors.grey[700], height: 1.4, fontSize: 14),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text('Baca Selengkapnya', style: GoogleFonts.poppins(color: Colors.blue.shade700, fontWeight: FontWeight.w600)),
+                        const SizedBox(width: 4),
+                        Icon(Icons.arrow_forward_ios, size: 12, color: Colors.blue.shade700),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  void _navigateToDetail(EducationArticle article) {
-    Navigator.pushNamed(
-      context,
-      '/education-detail',
-      arguments: article,
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'
-    ];
-    
-    return '${date.day} ${months[date.month - 1]} ${date.year}';
-  }
+// Di dalam class _EducationListScreenState
+void _navigateToDetail(EducationArticle article) {
+  Navigator.pushNamed(
+    context,
+    '/education-detail',
+    arguments: article, // Mengirim objek artikel sebagai argumen
+  );
+}
 }

@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../api/riwayat_api.dart';
-import '../model/riwayat_model.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart'; // Pastikan ini diimport untuk DateFormat
+import '../api/riwayat_api.dart'; // Sesuaikan path jika berbeda
+import '../model/riwayat_model.dart'; // Sesuaikan path jika berbeda
+
+// Import untuk CardContainer dan EnhancedProfileHeader
+// Sesuaikan path jika file homepage.dart Anda memiliki nama atau lokasi berbeda
+import '../home_page.dart'; 
 
 class RiwayatPage extends StatefulWidget {
-  const RiwayatPage({Key? key}) : super(key: key);
+  final String userName; // RiwayatPage sekarang membutuhkan userName
+  const RiwayatPage({Key? key, required this.userName}) : super(key: key);
 
   @override
   _RiwayatPageState createState() => _RiwayatPageState();
@@ -13,244 +19,201 @@ class RiwayatPage extends StatefulWidget {
 class _RiwayatPageState extends State<RiwayatPage> {
   late Future<List<PrediksiRiwayat>> _riwayatFuture;
 
-  // Define gradient colors for app theme - matching the reference blue color
-  final LinearGradient _appGradient = const LinearGradient(
-    colors: [Color.fromARGB(255, 23, 139, 234), Color.fromARGB(255, 10, 108, 195), Color.fromARGB(255, 6, 79, 153)], // Matching reference blue
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
-  // Lighter gradient for content backgrounds
-  final LinearGradient _cardGradient = const LinearGradient(
-    colors: [Color(0xFFFAFAFA), Color(0xFFE3F2FD)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
   @override
   void initState() {
     super.initState();
     _riwayatFuture = RiwayatApi.getCurrentUserHistory();
   }
 
-  // Format datetime to a readable format
   String formatDate(DateTime? date) {
     if (date == null) return '-';
-    return DateFormat('yyyy-MM-dd HH:mm').format(date);
+    // Asumsi 'id_ID' sudah diinisialisasi di main.dart
+    return DateFormat('d MMMM yyyy, HH:mm', 'id_ID').format(date);
+  }
+
+  void _refreshRiwayat() {
+    setState(() {
+      _riwayatFuture = RiwayatApi.getCurrentUserHistory();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(120), // Increased height for better curve
-        child: Container(
-          padding: const EdgeInsets.only(top: 20),
-          decoration: BoxDecoration(
-            gradient: _appGradient,
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(40), // Increased curve radius
-              bottomRight: Radius.circular(40),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3), // Stronger shadow
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-              BoxShadow(
-                color: const Color(0xFF1976D2).withOpacity(0.2),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
+      backgroundColor: Colors.blue[50], // Latar belakang konsisten
+      body: Column( // Menggunakan Column agar header dan list bisa di-scroll bersama
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Header Profil (Sama seperti di HomePage dan TargetHidupPage)
+          EnhancedProfileHeader(
+            userName: widget.userName,
+            onAvatarTap: () {
+              // Navigasi ke halaman profil jika ada
+              // Navigator.pushNamed(context, '/profile', arguments: {
+              //   'userName': widget.userName,
+              //   // 'userRole': 'PeranJikaAda', // Jika ProfilePage butuh userRole dan Anda memilikinya di sini
+              //   // 'patientId': 'IdPasienJikaAda', // Jika ProfilePage butuh patientId
+              // });
+            },
           ),
-          child: AppBar(
-            toolbarHeight: 120,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            automaticallyImplyLeading: false,
-            title: null,
-            leading: null,
-            flexibleSpace: const Padding(
-              padding: EdgeInsets.only(top: 35, left: 80),
-              child: Text('Riwayat Pemeriksaan',
-                  style: TextStyle(
-                    color: Colors.white, 
-                    fontWeight: FontWeight.w900, // Extra bold
-                    fontSize: 24, // Slightly larger
-                    letterSpacing: 1.0, // More spacing
-                    shadows: [
-                      Shadow(
-                        offset: Offset(0, 2),
-                        blurRadius: 4,
-                        color: Colors.black38, // Stronger shadow
-                      ),
-                      Shadow(
-                        offset: Offset(0, 1),
-                        blurRadius: 8,
-                        color: Colors.black26,
-                      ),
-                    ],
-                  )),
+          // 2. Judul Halaman
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Riwayat Pemeriksaan',
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.refresh_rounded, color: Colors.blue.shade700, size: 28),
+                  onPressed: _refreshRiwayat,
+                  tooltip: 'Muat Ulang Riwayat',
+                )
+              ],
             ),
           ),
-        ),
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [const Color(0xFF42A5F5), const Color(0xFFBBDEFB)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.only(top: 140), // Adjust for new AppBar height
-          child: FutureBuilder<List<PrediksiRiwayat>>(
-            future: _riwayatFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF64B5F6)),
-                  ),
-                );
-              } else if (snapshot.hasError) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
-                      const SizedBox(height: 16),
-                      Text('Error: ${snapshot.error}',
-                          style: const TextStyle(color: Color(0xFF42A5F5))),
-                    ],
-                  ),
-                );
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.history, size: 60, color: const Color(0xFF90CAF9)),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Belum ada riwayat pemeriksaan.',
-                        style: TextStyle(
-                            color: Color(0xFF42A5F5),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                );
-              } else {
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16.0),
-                  itemCount: snapshot.data!.length,
-                  itemBuilder: (context, index) {
-                    final riwayat = snapshot.data![index];
-                    return Card(
-                      elevation: 4,
-                      margin: const EdgeInsets.only(bottom: 16.0),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: _cardGradient,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: () {
-                            _showDetailDialog(context, riwayat);
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
+          // 3. Konten Utama (List Riwayat)
+          Expanded(
+            child: FutureBuilder<List<PrediksiRiwayat>>(
+              future: _riwayatFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return _buildStateCard(
+                    icon: Icons.error_outline_rounded,
+                    color: Colors.red.shade400,
+                    title: 'Gagal Memuat Riwayat',
+                    subtitle: 'Terjadi kesalahan: ${snapshot.error}. Coba muat ulang.',
+                    onRetry: _refreshRiwayat,
+                  );
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return _buildStateCard(
+                    icon: Icons.history_toggle_off_rounded,
+                    color: Colors.blue.shade300,
+                    title: 'Belum Ada Riwayat',
+                    subtitle: 'Data pemeriksaan Anda akan muncul di sini setelah Anda melakukan pemeriksaan.',
+                  );
+                } else {
+                  return ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20), // Padding untuk list
+                    itemCount: snapshot.data!.length,
+                    itemBuilder: (context, index) {
+                      final riwayat = snapshot.data![index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: CardContainer( // Menggunakan CardContainer
+                          padding: const EdgeInsets.all(16),
+                          child: InkWell(
+                            onTap: () => _showDetailDialog(context, riwayat),
+                            borderRadius: BorderRadius.circular(24), // Samakan dengan CardContainer
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(Icons.calendar_today,
-                                        color: Color(0xFF42A5F5), size: 18),
+                                    Icon(Icons.calendar_today_outlined, color: Colors.blue.shade700, size: 20),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      'Tanggal: ${formatDate(riwayat.predictionTimestamp ?? riwayat.createdAt)}',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          color: Color(0xFF42A5F5)),
+                                    Expanded(
+                                      child: Text(
+                                        formatDate(riwayat.predictionTimestamp ?? riwayat.createdAt),
+                                        style: GoogleFonts.poppins(
+                                            fontWeight: FontWeight.w600, // Dibuat lebih tebal
+                                            fontSize: 15,
+                                            color: Colors.blue.shade800),
+                                      ),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 12),
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Text('Hasil Prediksi: ',
-                                        style: TextStyle(
-                                            fontSize: 15,
-                                            color: Color(0xFF64B5F6),
-                                            fontWeight: FontWeight.w500)),
-                                    const SizedBox(width: 4),
-                                    _buildPredictionResult(
-                                        riwayat.predictionResult ?? riwayat.result),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: ElevatedButton(
-                                    onPressed: () =>
-                                        _showDetailDialog(context, riwayat),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF64B5F6),
-                                      foregroundColor: Colors.white,
-                                      elevation: 2,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 8),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
+                                    Row(
                                       children: [
-                                        Text('Lihat Detail'),
-                                        SizedBox(width: 4),
-                                        Icon(Icons.arrow_forward, size: 16),
+                                        Text('Hasil Prediksi: ',
+                                            style: GoogleFonts.poppins(
+                                                fontSize: 14,
+                                                color: Colors.grey.shade700,
+                                                fontWeight: FontWeight.w500)),
+                                        const SizedBox(width: 4),
+                                        _buildPredictionResultChip(riwayat.predictionResult ?? riwayat.result),
                                       ],
                                     ),
-                                  ),
+                                     Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              }
-            },
+                      );
+                    },
+                  );
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget untuk menampilkan status (Error/Empty) yang lebih baik
+  Widget _buildStateCard({required IconData icon, required Color color, required String title, required String subtitle, VoidCallback? onRetry}) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: CardContainer(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min, // Agar kartu tidak memenuhi layar jika konten sedikit
+            children: [
+              Icon(icon, size: 60, color: color),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
+              ),
+              if (onRetry != null) ...[
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: Text('Coba Lagi', style: GoogleFonts.poppins()),
+                  onPressed: onRetry,
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade600, foregroundColor: Colors.white),
+                )
+              ]
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildPredictionResult(String? result) {
+
+  Widget _buildPredictionResultChip(String? result) {
     Color textColor;
     Color bgColor;
     String displayText;
 
     if (result == null || result.isEmpty) {
-      textColor = Colors.grey;
-      bgColor = Colors.grey.withOpacity(0.1);
-      displayText = '-';
+      textColor = Colors.grey.shade700;
+      bgColor = Colors.grey.shade200;
+      displayText = 'N/A';
     } else if (result.toLowerCase() == 'positif' ||
         result.toLowerCase() == 'positive' ||
         result.toLowerCase() == '1' ||
@@ -265,25 +228,18 @@ class _RiwayatPageState extends State<RiwayatPage> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: textColor.withOpacity(0.7)),
-        boxShadow: [
-          BoxShadow(
-            color: textColor.withOpacity(0.2),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16), // Dibuat lebih rounded
+        border: Border.all(color: textColor.withOpacity(0.4)),
       ),
       child: Text(
         displayText,
-        style: TextStyle(
+        style: GoogleFonts.poppins(
           color: textColor,
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
+          fontWeight: FontWeight.w600, // Dibuat lebih tebal
+          fontSize: 12,
         ),
       ),
     );
@@ -292,127 +248,57 @@ class _RiwayatPageState extends State<RiwayatPage> {
   void _showDetailDialog(BuildContext context, PrediksiRiwayat riwayat) {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        elevation: 8,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.white, const Color(0xFFE3F2FD)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-            borderRadius: BorderRadius.circular(20),
-          ),
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 0, // Agar bayangan dari CardContainer lebih terlihat jika perlu
+        backgroundColor: Colors.transparent, // Agar bisa memakai CardContainer
+        child: CardContainer( // Menggunakan CardContainer untuk dialog
           padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF90CAF9).withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.article_rounded,
-                      color: Color(0xFF42A5F5),
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Detail Pemeriksaan',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF42A5F5),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _detailItem(Icons.calendar_today, 'Tanggal Pemeriksaan',
-                  formatDate(riwayat.predictionTimestamp ?? riwayat.createdAt)),
-              _detailItem(Icons.medical_information, 'Hasil Prediksi',
-                  _getPredictionText(riwayat.predictionResult ?? riwayat.result)),
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 16),
-                height: 1,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFF90CAF9).withOpacity(0.1),
-                      const Color(0xFF90CAF9).withOpacity(0.5),
-                      const Color(0xFF90CAF9).withOpacity(0.1),
-                    ],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE3F2FD).withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFF90CAF9).withOpacity(0.5),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: SingleChildScrollView( // Agar bisa di-scroll jika konten panjang
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
                   children: [
-                    const Text(
-                      'Data Pemeriksaan:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Color(0xFF42A5F5),
-                      ),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: Colors.blue.shade100, borderRadius: BorderRadius.circular(12)),
+                      child: Icon(Icons.receipt_long_outlined, color: Colors.blue.shade700, size: 28),
                     ),
-                    const SizedBox(height: 12),
-                    _detailItem(
-                        Icons.person, 'Usia', riwayat.age?.toString() ?? '-'),
-                    _detailItem(Icons.height, 'Tinggi Badan',
-                        riwayat.height != null ? '${riwayat.height} cm' : '-'),
-                    _detailItem(Icons.fitness_center, 'Berat Badan',
-                        riwayat.weight != null ? '${riwayat.weight} kg' : '-'),
-                    _detailItem(Icons.monitor_weight, 'BMI',
-                        riwayat.bmi?.toStringAsFixed(2) ?? '-'),
-                    _detailItem(Icons.opacity, 'Glukosa',
-                        riwayat.glucose?.toString() ?? '-'),
-                    _detailItem(Icons.favorite, 'Tekanan Darah',
-                        riwayat.bloodPressure?.toString() ?? '-'),
-                    _detailItem(Icons.child_care, 'Kehamilan',
-                        riwayat.pregnancies?.toString() ?? '-'),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Detail Pemeriksaan',
+                      style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
+                    ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 24),
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF64B5F6),
-                    foregroundColor: Colors.white,
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  ),
-                  child: const Text('Tutup', style: TextStyle(fontSize: 16)),
+                const SizedBox(height: 24),
+                _detailItem(Icons.calendar_today_outlined, 'Tanggal', formatDate(riwayat.predictionTimestamp ?? riwayat.createdAt)),
+                _detailItem(Icons.medical_information_outlined, 'Hasil Prediksi', _getPredictionText(riwayat.predictionResult ?? riwayat.result)),
+                Divider(color: Colors.blue.shade100, thickness: 1, height: 32),
+                 Text(
+                  'Data Input Pemeriksaan:',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.blue.shade700),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                _detailItem(Icons.elderly_outlined, 'Usia', riwayat.age?.toString() ?? '-'),
+                _detailItem(Icons.height_rounded, 'Tinggi Badan', riwayat.height != null ? '${riwayat.height} cm' : '-'),
+                _detailItem(Icons.fitness_center_rounded, 'Berat Badan', riwayat.weight != null ? '${riwayat.weight} kg' : '-'),
+                _detailItem(Icons.monitor_weight_outlined, 'BMI', riwayat.bmi?.toStringAsFixed(2) ?? '-'),
+                _detailItem(Icons.opacity_outlined, 'Glukosa', riwayat.glucose?.toString() ?? '-'), // Ikon disesuaikan
+                _detailItem(Icons.favorite_outline_rounded, 'Tekanan Darah', riwayat.bloodPressure?.toString() ?? '-'),
+                _detailItem(Icons.pregnant_woman_outlined, 'Kehamilan', riwayat.pregnancies?.toString() ?? '-'), // Ikon disesuaikan
+                const SizedBox(height: 24),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: Text('Tutup', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -420,12 +306,8 @@ class _RiwayatPageState extends State<RiwayatPage> {
   }
 
   String _getPredictionText(String? result) {
-    if (result == null || result.isEmpty) {
-      return '-';
-    } else if (result.toLowerCase() == 'positif' ||
-        result.toLowerCase() == 'positive' ||
-        result.toLowerCase() == '1' ||
-        result.toLowerCase() == 'true') {
+    if (result == null || result.isEmpty) return '-';
+    if (result.toLowerCase() == 'positif' || result.toLowerCase() == 'positive' || result.toLowerCase() == '1' || result.toLowerCase() == 'true') {
       return 'Positif';
     } else {
       return 'Negatif';
@@ -434,33 +316,23 @@ class _RiwayatPageState extends State<RiwayatPage> {
 
   Widget _detailItem(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0), // Jarak antar item
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 18,
-            color: const Color(0xFF64B5F6),
-          ),
-          const SizedBox(width: 8),
+          Icon(icon, size: 20, color: Colors.blue.shade400),
+          const SizedBox(width: 12),
           SizedBox(
-            width: 120,
+            width: 110, // Lebar label disesuaikan
             child: Text(
               '$label:',
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF64B5F6),
-              ),
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: Colors.grey.shade700, fontSize: 14),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                color: Color(0xFF333333),
-                fontWeight: FontWeight.w400,
-              ),
+              style: GoogleFonts.poppins(color: Colors.black87, fontWeight: FontWeight.w500, fontSize: 14),
             ),
           ),
         ],

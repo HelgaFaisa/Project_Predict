@@ -8,6 +8,7 @@ class Gejala {
   final double mb;
   final double md;
   final bool aktif;
+  final String? pertanyaan;
 
   Gejala({
     required this.id,
@@ -16,6 +17,7 @@ class Gejala {
     required this.mb,
     required this.md,
     this.aktif = true,
+     this.pertanyaan,
   });
 
   // Konversi dari JSON ke objek Gejala

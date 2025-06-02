@@ -24,11 +24,16 @@ import 'target/targethidup.dart';
 import 'model/ProfileEdit.dart';
 import 'model/ProfileHeader.dart';
 import '../logindokter/profile.dart';
+import 'package:intl/date_symbol_data_local.dart';
+Future<void> main() async { // Tambahkan async
+  // Pastikan Flutter bindings sudah siap sebelum menjalankan kode async apa pun
+  WidgetsFlutterBinding.ensureInitialized(); 
 
-void main() {
-  runApp(MyApp());
+  // Inisialisasi data lokalisasi untuk Bahasa Indonesia
+  await initializeDateFormatting('id_ID', null); 
+
+  runApp( MyApp()); // Ganti MyApp dengan nama class root aplikasi Anda
 }
-
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -50,11 +55,12 @@ class MyApp extends StatelessWidget {
         '/home': (context) => HomePage(
           userName: 'Pengguna Default',
           patientId: 'default_patient_id',
+          userRole: 'Peran Default',
         ),
-        '/riwayat': (context) => RiwayatPage(),
-        '/edukasi': (context) => EducationListScreen(),
-        '/gejala': (context) => GejalaPage(),
-        '/target': (context) => TargetHidupPage(),
+        //'/edukasi': (context) => EducationListScreen(), // Jika EducationListScreen tidak butuh parameter
+        //'/gejala': (context) => GejalaPage(),       // Jika GejalaPage tidak butuh parameter
+        // '/gejala': (context) => GejalaPage(),
+        // '/target': (context) => TargetHidupPage(),
       },
       // PERBAIKAN: Tambahkan route untuk education-detail dan lainnya
       onGenerateRoute: (settings) {

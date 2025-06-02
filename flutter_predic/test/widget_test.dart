@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_predic/logindokter/login.dart'; // Ganti juga jika perlu
-import 'package:flutter_predic/home_page.dart';
+import 'package:flutter_predic/main.dart';
 
 void main() {
   testWidgets('Login success navigates to HomePage', (WidgetTester tester) async {
