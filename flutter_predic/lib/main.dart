@@ -1,4 +1,4 @@
-// lib/main.dart - VERSI DENGAN ROUTING DINAMIS
+// lib/main.dart - VERSI DENGAN ROUTING DINAMIS + EDUCATION DETAIL
 
 import 'package:flutter/material.dart';
 import 'package:flutter_predic/model/ProfileEdit.dart';
@@ -13,6 +13,9 @@ import 'api/riwayat_api.dart';
 import 'api/login_api.dart';
 import 'edukasi/edukasi.dart';
 import 'edukasi/ArtikelDetailPage.dart';
+// PERBAIKAN: Import EducationDetailScreen dan model
+// import 'screens/education_detail_screen.dart';
+import 'model/edukasiartikel.dart';
 import 'api/edukasi_api.dart';
 import 'api/gejala_api.dart';
 import 'gejala/gejala_page.dart';
@@ -49,13 +52,21 @@ class MyApp extends StatelessWidget {
           patientId: 'default_patient_id',
         ),
         '/riwayat': (context) => RiwayatPage(),
-        '/edukasi': (context) => EdukasiPage(),
+        '/edukasi': (context) => EducationListScreen(),
         '/gejala': (context) => GejalaPage(),
         '/target': (context) => TargetHidupPage(),
       },
-      // PERBAIKAN: Gunakan onGenerateRoute untuk handling dynamic data
+      // PERBAIKAN: Tambahkan route untuk education-detail dan lainnya
       onGenerateRoute: (settings) {
         switch (settings.name) {
+          // ROUTE BARU: Education Detail
+          case '/education-detail':
+            final article = settings.arguments as EducationArticle?;
+            return MaterialPageRoute(
+              builder: (context) => EducationDetailScreen(article: article),
+              settings: settings,
+            );
+          
           case '/profile':
             final args = settings.arguments as Map<String, dynamic>?;
             return MaterialPageRoute(
@@ -84,6 +95,16 @@ class MyApp extends StatelessWidget {
               ),
             );
           
+          // ROUTE TAMBAHAN: Jika ada route artikel detail lain
+          case '/artikel-detail':
+            final args = settings.arguments as Map<String, dynamic>?;
+            return MaterialPageRoute(
+              builder: (context) => EducationDetailScreen(
+                articleId: args?['articleId'],
+                articleSlug: args?['articleSlug'],
+              ),
+            );
+          
           default:
             return null;
         }
@@ -91,20 +112,54 @@ class MyApp extends StatelessWidget {
       onUnknownRoute: (settings) {
         return MaterialPageRoute(
           builder: (context) => Scaffold(
-            appBar: AppBar(title: Text('Halaman Tidak Ditemukan')),
+            appBar: AppBar(
+              title: Text('Halaman Tidak Ditemukan'),
+              backgroundColor: Colors.red[700],
+              foregroundColor: Colors.white,
+            ),
             body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: Colors.red),
-                  SizedBox(height: 16),
-                  Text('Halaman "${settings.name}" tidak ditemukan'),
-                  SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pushReplacementNamed(context, '/'),
-                    child: Text('Kembali ke Beranda'),
-                  ),
-                ],
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 80, color: Colors.red[400]),
+                    SizedBox(height: 20),
+                    Text(
+                      'Halaman Tidak Ditemukan',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red[700],
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Route "${settings.name}" tidak dapat ditemukan',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    SizedBox(height: 30),
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.pushReplacementNamed(context, '/'),
+                      icon: Icon(Icons.home),
+                      label: Text('Kembali ke Beranda'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue[700],
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Kembali ke Halaman Sebelumnya'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

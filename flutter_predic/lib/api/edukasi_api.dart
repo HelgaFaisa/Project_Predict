@@ -1,109 +1,215 @@
+// services/education_service.dart
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../model/edukasiartikel.dart';
 
-class EdukasiApi {
-  // Ubah baseURL sesuai dengan alamat server Anda
-  // 10.0.2.2 adalah alamat localhost dari emulator Android
-  // Untuk iOS simulator, gunakan http://localhost:8000/api
-static const String baseUrl = 'http://localhost:8000/api';
-  static Future<List<dynamic>> getAllArticles() async {
+class EducationService {
+  static const String baseUrl = 'http://localhost:8000/api';
+  static const String edukasiEndpoint = '$baseUrl/edukasi';
+
+  // Headers default untuk API
+  static Map<String, String> get headers => {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+
+  // Mendapatkan semua artikel dengan pagination dan filter
+  static Future<ApiResponse<List<EducationArticle>>> getArticles({
+    int page = 1,
+    int perPage = 10,
+    String? category,
+    String? search,
+  }) async {
     try {
-      print('Mencoba akses API: $baseUrl/edukasi');
+      // Build query parameters
+      Map<String, String> queryParams = {
+        'page': page.toString(),
+        'per_page': perPage.toString(),
+      };
 
-      // Tambahkan timeout untuk menghindari menunggu terlalu lama
-      final response = await http.get(
-        Uri.parse('$baseUrl/edukasi'),
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      ).timeout(Duration(seconds: 15), onTimeout: () {
-        throw SocketException('Koneksi timeout. Periksa koneksi internet Anda.');
-      });
+      if (category != null && category.isNotEmpty) {
+        queryParams['category'] = category;
+      }
 
-      print('Status code: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      if (search != null && search.isNotEmpty) {
+        queryParams['search'] = search;
+      }
+
+      // Build URI dengan query parameters
+      final uri = Uri.parse(edukasiEndpoint).replace(
+        queryParameters: queryParams,
+      );
+
+      print('Making request to: $uri'); // Debug log
+
+      final response = await http.get(uri, headers: headers).timeout(
+        const Duration(seconds: 30),
+      );
+
+      print('Response status: ${response.statusCode}'); // Debug log
+      print('Response body: ${response.body}'); // Debug log
 
       if (response.statusCode == 200) {
-        // Decode response JSON
-        final decodedData = jsonDecode(response.body);
-
-        // Handle berbagai format respons API
-        if (decodedData is List) {
-          // Jika respons langsung berupa array
-          return decodedData;
-        } else if (decodedData is Map) {
-          // Jika respons dalam format {data: [...]}
-          if (decodedData.containsKey('data')) {
-            return decodedData['data'];
-          }
-          // Jika format lain yang berisi array (misalnya {items: [...]})
-          // Anda bisa menambahkan kondisi lain di sini sesuai dengan struktur API Anda
-          print('Format respons tidak dikenal: $decodedData');
-          return [];
-        } else {
-          print('Format respons tidak dikenal: $decodedData');
-          return [];
-        }
-      } else if (response.statusCode == 404) {
-        throw Exception('Endpoint API tidak ditemukan. Periksa URL API Anda.');
+        final jsonData = json.decode(response.body);
+        
+        return ApiResponse<List<EducationArticle>>(
+          success: jsonData['success'] ?? false,
+          message: jsonData['message'] ?? '',
+          data: jsonData['data'] != null
+              ? (jsonData['data'] as List)
+                  .map((item) => EducationArticle.fromJson(item))
+                  .toList()
+              : [],
+          pagination: jsonData['pagination'] != null
+              ? PaginationInfo.fromJson(jsonData['pagination'])
+              : null,
+        );
       } else {
-        throw Exception('Gagal memuat data edukasi. Status code: ${response.statusCode}');
+        final errorData = json.decode(response.body);
+        return ApiResponse<List<EducationArticle>>(
+          success: false,
+          message: errorData['message'] ?? 'Gagal memuat data',
+          error: errorData['error'],
+        );
       }
-    } on SocketException catch (e) {
-      print('Socket Exception: $e');
-      throw Exception('Tidak dapat terhubung ke server. Periksa koneksi internet Anda atau pastikan server berjalan.');
-    } on FormatException catch (e) {
-      print('Format Exception: $e');
-      throw Exception('Format respons API tidak valid.');
+    } on SocketException {
+      return ApiResponse<List<EducationArticle>>(
+        success: false,
+        message: 'Tidak dapat terhubung ke server. Pastikan server Laravel berjalan di localhost:8000',
+        error: 'Connection failed',
+      );
+    } on http.ClientException {
+      return ApiResponse<List<EducationArticle>>(
+        success: false,
+        message: 'Gagal menghubungi server',
+        error: 'Client error',
+      );
     } catch (e) {
-      print('General Exception: $e');
-      throw Exception('Terjadi kesalahan: $e');
+      print('Error in getArticles: $e'); // Debug log
+      return ApiResponse<List<EducationArticle>>(
+        success: false,
+        message: 'Terjadi kesalahan: ${e.toString()}',
+        error: e.toString(),
+      );
     }
   }
 
-  static Future<Map<String, dynamic>> getArticleDetail(int id) async {
+  // Mendapatkan artikel berdasarkan ID
+  static Future<ApiResponse<EducationArticle>> getArticleById(String id) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/edukasi/$id'),
-        headers: {
-          'Accept': 'application/json',
-        },
-      ).timeout(Duration(seconds: 10));
+        Uri.parse('$edukasiEndpoint/$id'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 30));
+
+      print('Get article by ID response: ${response.statusCode}'); // Debug log
 
       if (response.statusCode == 200) {
-        final dynamic decodedData = jsonDecode(response.body);
-
-        if (decodedData is Map) {
-          // Jika respons memiliki key 'data' yang berisi detail artikel
-          if (decodedData.containsKey('data')) {
-            if (decodedData['data'] is Map<String, dynamic>) {
-              return decodedData['data'];
-            } else {
-              throw Exception('Format data detail artikel di dalam "data" tidak valid.');
-            }
-          }
-          // Jika respons langsung berupa detail artikel (tanpa key 'data')
-          if (decodedData is Map<String, dynamic>) {
-            return decodedData;
-          } else {
-            throw Exception('Format respons detail artikel tidak sesuai dengan Map<String, dynamic>.');
-          }
-        } else {
-          throw Exception('Format respons detail artikel tidak valid.');
-        }
+        final jsonData = json.decode(response.body);
+        
+        return ApiResponse<EducationArticle>(
+          success: jsonData['success'] ?? false,
+          message: jsonData['message'] ?? '',
+          data: jsonData['data'] != null
+              ? EducationArticle.fromJson(jsonData['data'])
+              : null,
+        );
       } else if (response.statusCode == 404) {
-        throw Exception('Detail artikel tidak ditemukan.');
+        return ApiResponse<EducationArticle>(
+          success: false,
+          message: 'Artikel tidak ditemukan',
+        );
       } else {
-        throw Exception('Gagal memuat detail artikel. Status code: ${response.statusCode}');
+        final errorData = json.decode(response.body);
+        return ApiResponse<EducationArticle>(
+          success: false,
+          message: errorData['message'] ?? 'Gagal memuat artikel',
+          error: errorData['error'],
+        );
       }
-    } on SocketException catch (e) {
-      throw Exception('Tidak dapat terhubung ke server saat mengambil detail artikel.');
-    } on FormatException catch (e) {
-      throw Exception('Format respons detail artikel dari server tidak valid.');
     } catch (e) {
-      throw Exception('Terjadi kesalahan saat mengambil detail artikel: $e');
+      print('Error in getArticleById: $e'); // Debug log
+      return ApiResponse<EducationArticle>(
+        success: false,
+        message: 'Terjadi kesalahan: ${e.toString()}',
+        error: e.toString(),
+      );
+    }
+  }
+
+  // Mendapatkan artikel berdasarkan slug
+  static Future<ApiResponse<EducationArticle>> getArticleBySlug(String slug) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$edukasiEndpoint/slug/$slug'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        
+        return ApiResponse<EducationArticle>(
+          success: jsonData['success'] ?? false,
+          message: jsonData['message'] ?? '',
+          data: jsonData['data'] != null
+              ? EducationArticle.fromJson(jsonData['data'])
+              : null,
+        );
+      } else if (response.statusCode == 404) {
+        return ApiResponse<EducationArticle>(
+          success: false,
+          message: 'Artikel tidak ditemukan',
+        );
+      } else {
+        final errorData = json.decode(response.body);
+        return ApiResponse<EducationArticle>(
+          success: false,
+          message: errorData['message'] ?? 'Gagal memuat artikel',
+          error: errorData['error'],
+        );
+      }
+    } catch (e) {
+      return ApiResponse<EducationArticle>(
+        success: false,
+        message: 'Terjadi kesalahan: ${e.toString()}',
+        error: e.toString(),
+      );
+    }
+  }
+
+  // Mendapatkan daftar kategori
+  static Future<ApiResponse<List<String>>> getCategories() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$edukasiEndpoint/categories'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        
+        return ApiResponse<List<String>>(
+          success: jsonData['success'] ?? false,
+          message: jsonData['message'] ?? '',
+          data: jsonData['data'] != null
+              ? List<String>.from(jsonData['data'])
+              : [],
+        );
+      } else {
+        final errorData = json.decode(response.body);
+        return ApiResponse<List<String>>(
+          success: false,
+          message: errorData['message'] ?? 'Gagal memuat kategori',
+          error: errorData['error'],
+        );
+      }
+    } catch (e) {
+      return ApiResponse<List<String>>(
+        success: false,
+        message: 'Terjadi kesalahan: ${e.toString()}',
+        error: e.toString(),
+      );
     }
   }
 }

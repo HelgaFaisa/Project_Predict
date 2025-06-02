@@ -32,8 +32,6 @@ Route::get('/gejala/aktif', [GejalaApiController::class, 'aktif']);
 
 // Other routes
 Route::post('/hasil_diagnosis', 'App\Http\Controllers\DiagnosisController@store');
-Route::get('/edukasi', [EdukasiApiController::class, 'index']);
-Route::get('/edukasi/{id}', [EdukasiApiController::class, 'show']);
 Route::get('/prediction-history/{accountId}', [PredictionHistoryApiController::class, 'getByAccountId']);
 
 // Auth routes
@@ -92,4 +90,24 @@ Route::prefix('habits')->group(function () {
     
     // DELETE Routes
     Route::delete('/{id}', [HabitController::class, 'deleteHabit']);
+});
+
+Route::middleware('api')->group(function () {
+    
+    // Routes untuk Edukasi/Artikel
+    Route::prefix('edukasi')->group(function () {
+        Route::get('/', [EdukasiApiController::class, 'index']); // GET /api/edukasi
+        Route::get('/categories', [EdukasiApiController::class, 'categories']); // GET /api/edukasi/categories
+        Route::get('/{id}', [EdukasiApiController::class, 'show']); // GET /api/edukasi/{id}
+        Route::get('/slug/{slug}', [EdukasiApiController::class, 'showBySlug']); // GET /api/edukasi/slug/{slug}
+    });
+    
+});
+
+// Route fallback untuk API yang tidak ditemukan
+Route::fallback(function(){
+    return response()->json([
+        'success' => false,
+        'message' => 'API endpoint tidak ditemukan'
+    ], 404);
 });
