@@ -121,7 +121,7 @@
             </div>
         </div>
         <div class="bg-white rounded-xl shadow p-6 border border-gray-200 lg:col-span-1">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Distribusi Prediksi</h2>
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Perbandingan Hasil Prediksi Diabetes</h2>
             <div class="h-72 md:h-80 flex items-center justify-center">
                 <canvas id="predictionDistributionChart" style="max-width: 300px; max-height: 300px;"></canvas>
             </div>
