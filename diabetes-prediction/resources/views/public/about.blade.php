@@ -35,7 +35,7 @@
                     </a>
                 </div>
                 <div class="order-1 md:order-2">
-                    <img src="https://placehold.co/600x500/E0EFFF/1E40AF?text=Tim+DiabetaCare" alt="Tim DiabetaCare sedang berdiskusi" class="rounded-xl shadow-elegant w-full">
+                    <img src="{{ asset('images/gambar12.png') }}" alt="Tim DiabetaCare sedang berdiskusi" class="rounded-xl shadow-elegant w-full">
                     {{-- Ganti dengan URL gambar tim Anda atau ilustrasi yang relevan --}}
                 </div>
             </div>
@@ -97,17 +97,17 @@
             {{-- Contoh Placeholder Tim --}}
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-4xl mx-auto">
                 <div class="text-center">
-                    <img src="https://placehold.co/200x200/E0EFFF/1E40AF?text=Dr.%20A" alt="Foto Dr. Ahli Diabetes" class="w-32 h-32 rounded-full mx-auto mb-4 shadow-md border-4 border-white">
+                    <img src="{{ asset('images/gambar13.png') }}" alt="Foto Dr. Ahli Diabetes" class="w-32 h-32 rounded-full mx-auto mb-4 shadow-md border-4 border-white">
                     <h4 class="text-lg font-semibold text-brand-navy">Dr. Ahli Diabetes, Sp.PD-KEMD</h4>
                     <p class="text-sm text-brand-primary-DEFAULT">Kepala Penasihat Medis</p>
                 </div>
                 <div class="text-center">
-                    <img src="https://placehold.co/200x200/E0EFFF/1E40AF?text=Nutrisionis%20B" alt="Foto Nutrisionis" class="w-32 h-32 rounded-full mx-auto mb-4 shadow-md border-4 border-white">
+                    <img src="{{ asset('images/gambar16.png') }}" alt="Foto Nutrisionis" class="w-32 h-32 rounded-full mx-auto mb-4 shadow-md border-4 border-white">
                     <h4 class="text-lg font-semibold text-brand-navy">Nutrisionis Cerdas, S.Gz</h4>
                     <p class="text-sm text-brand-primary-DEFAULT">Spesialis Gizi Diabetes</p>
                 </div>
                 <div class="text-center">
-                    <img src="https://placehold.co/200x200/E0EFFF/1E40AF?text=Tech%20Lead" alt="Foto Pengembang Utama" class="w-32 h-32 rounded-full mx-auto mb-4 shadow-md border-4 border-white">
+                    <img src="{{ asset('images/gambar14.png') }}" alt="Foto Pengembang Utama" class="w-32 h-32 rounded-full mx-auto mb-4 shadow-md border-4 border-white">
                     <h4 class="text-lg font-semibold text-brand-navy">Pengembang Inovatif, S.Kom</h4>
                     <p class="text-sm text-brand-primary-DEFAULT">Pengembang Utama Platform</p>
                 </div>
