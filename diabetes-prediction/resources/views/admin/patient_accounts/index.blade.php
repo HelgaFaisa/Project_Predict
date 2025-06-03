@@ -31,7 +31,6 @@
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email Login</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. Telepon</th>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Login Terakhir</th>
                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                 </tr>
             </thead>
@@ -55,9 +54,6 @@
                             </span>
                         @endif
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {{ $account->last_login_at ? $account->last_login_at->translatedFormat('d M Y, H:i') : 'Belum pernah login' }}
-                    </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                         <a href="{{ route('admin.patient-accounts.edit', $account) }}" class="text-indigo-600 hover:text-indigo-800" title="Edit Akun">
                             <i class="ri-pencil-line text-lg"></i>
@@ -77,7 +73,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                    <td colspan="5" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                         Belum ada akun pasien.
                     </td>
                 </tr>
@@ -183,37 +179,5 @@
     } else {
         console.warn('Elemen modal konfirmasi hapus tidak ditemukan. Pastikan HTML modal ada dan ID-nya benar.');
     }
-
-    // Script untuk auto-hide alerts (jika diperlukan dan belum ada di layout utama)
-    // Pastikan fungsi closeAlert didefinisikan jika tombol close manual alert digunakan.
-    // Anda bisa menyalinnya dari contoh sebelumnya jika belum ada.
-    // Contoh:
-    // document.addEventListener('DOMContentLoaded', function() {
-    //     setTimeout(function() {
-    //         const successAlert = document.getElementById('alert-success'); // Sesuaikan ID jika perlu
-    //         const errorAlert = document.getElementById('alert-error'); // Sesuaikan ID jika perlu
-            
-    //         if (successAlert) {
-    //             successAlert.style.opacity = '0';
-    //             successAlert.style.transition = 'opacity 1s';
-    //             setTimeout(() => successAlert.style.display = 'none', 1000);
-    //         }
-            
-    //         if (errorAlert) {
-    //             errorAlert.style.opacity = '0';
-    //             errorAlert.style.transition = 'opacity 1s';
-    //             setTimeout(() => errorAlert.style.display = 'none', 1000);
-    //         }
-    //     }, 5000);
-    // });
-
-    // function closeAlert(alertId) {
-    //     const alert = document.getElementById(alertId);
-    //     if (alert) {
-    //         alert.style.opacity = '0';
-    //         alert.style.transition = 'opacity 0.5s';
-    //         setTimeout(() => alert.style.display = 'none', 500);
-    //     }
-    // }
 </script>
 @endpush

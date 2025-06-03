@@ -24,7 +24,15 @@
             <input type="date" name="end_date" id="end_date" value="{{ $requestedEndDate ?? '' }}"
                    class="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
         </div>
-        {{-- ... tombol filter ... --}}
+        {{-- Tombol untuk Menerapkan Filter dan Reset --}}
+        <div class="flex items-center gap-x-2">
+            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-sm font-semibold">
+                Terapkan Filter
+            </button>
+            <a href="{{ route('admin.dashboard') }}" class="text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-100 text-sm">
+                Reset
+            </a>
+        </div>
     </form>
 </div>
     {{-- AKHIR FORM FILTER TANGGAL --}}
