@@ -549,7 +549,7 @@ class _GraphCardPageContent extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Tren Parameter Kesehatan',
+                'Tren Kesehatan',
                 style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
               ),
               _buildPeriodSelector(selectedPeriod, onPeriodChanged),
