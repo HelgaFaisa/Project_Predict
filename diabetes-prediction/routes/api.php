@@ -95,12 +95,14 @@ Route::prefix('habits')->group(function () {
 Route::middleware('api')->group(function () {
     
     // Routes untuk Edukasi/Artikel
-    Route::prefix('edukasi')->group(function () {
-        Route::get('/', [EdukasiApiController::class, 'index']); // GET /api/edukasi
-        Route::get('/categories', [EdukasiApiController::class, 'categories']); // GET /api/edukasi/categories
-        Route::get('/{id}', [EdukasiApiController::class, 'show']); // GET /api/edukasi/{id}
-        Route::get('/slug/{slug}', [EdukasiApiController::class, 'showBySlug']); // GET /api/edukasi/slug/{slug}
-    });
+   Route::prefix('edukasi')->group(function () {
+    Route::get('/debug', [EdukasiApiController::class, 'debug']); // Route debug baru
+    Route::get('/test', [EdukasiApiController::class, 'test']); // Route test
+    Route::get('/', [EdukasiApiController::class, 'index']);
+    Route::get('/categories', [EdukasiApiController::class, 'categories']);
+    Route::get('/{id}', [EdukasiApiController::class, 'show']);
+    Route::get('/slug/{slug}', [EdukasiApiController::class, 'showBySlug']);
+});
     
 });
 

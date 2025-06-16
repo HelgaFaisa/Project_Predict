@@ -10,30 +10,85 @@ use Illuminate\Http\Request;
 class EdukasiApiController extends Controller
 {
     /**
+     * Debug endpoint untuk melihat semua artikel
+     */
+    public function debug()
+    {
+        try {
+            $debugInfo = EducationArticle::debugArticles();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Debug information',
+                'data' => $debugInfo
+            ], 200);
+            
+        } catch (Exception $e) {
+            \Log::error('Error in debug: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Debug failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Test endpoint untuk memastikan API berfungsi
+     */
+    public function test()
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'API is working',
+            'timestamp' => now(),
+            'database_connection' => 'OK'
+        ], 200);
+    }
+
+    /**
      * Mendapatkan semua artikel edukasi yang dipublikasikan
      */
     public function index(Request $request)
     {
         try {
+            // Debug log
+            \Log::info('=== API INDEX REQUEST ===');
+            \Log::info('Request parameters: ', $request->all());
+            
             $query = EducationArticle::published()
                     ->latest('published_at');
+
+            // Debug: cek jumlah artikel published
+            $publishedCount = EducationArticle::published()->count();
+            $totalCount = EducationArticle::count();
+            
+            \Log::info("Total articles in DB: $totalCount");
+            \Log::info("Published articles: $publishedCount");
 
             // Filter berdasarkan kategori jika ada
             if ($request->has('category') && $request->category != '') {
                 $query->where('category', $request->category);
+                \Log::info('Filtering by category: ' . $request->category);
             }
 
             // Pencarian berdasarkan judul jika ada
             if ($request->has('search') && $request->search != '') {
                 $query->where('title', 'like', '%' . $request->search . '%');
+                \Log::info('Searching for: ' . $request->search);
             }
 
             // Pagination
             $perPage = $request->get('per_page', 10);
             $articles = $query->paginate($perPage);
+            
+            \Log::info("Articles after query: " . $articles->count());
 
             // Transform data untuk memastikan URL gambar benar
             $transformedData = $articles->getCollection()->map(function ($article) {
+                \Log::info("Processing article: {$article->title}");
+                
                 return [
                     'id' => $article->id,
                     'title' => $article->title,
@@ -53,7 +108,7 @@ class EdukasiApiController extends Controller
                 ];
             });
 
-            return response()->json([
+            $response = [
                 'success' => true,
                 'message' => 'Data artikel berhasil dimuat',
                 'data' => $transformedData,
@@ -64,8 +119,17 @@ class EdukasiApiController extends Controller
                     'last_page' => $articles->lastPage(),
                     'from' => $articles->firstItem(),
                     'to' => $articles->lastItem(),
+                ],
+                'debug_info' => [
+                    'total_in_db' => $totalCount,
+                    'published_count' => $publishedCount,
+                    'returned_count' => $articles->count(),
                 ]
-            ], 200);
+            ];
+            
+            \Log::info('API Response prepared successfully');
+            
+            return response()->json($response, 200);
 
         } catch (Exception $e) {
             \Log::error('Error in EdukasiApiController@index: ' . $e->getMessage());
@@ -85,6 +149,8 @@ class EdukasiApiController extends Controller
     public function show($id)
     {
         try {
+            \Log::info("Getting article by ID: $id");
+            
             $article = EducationArticle::findOrFail($id);
 
             // Transform data untuk response

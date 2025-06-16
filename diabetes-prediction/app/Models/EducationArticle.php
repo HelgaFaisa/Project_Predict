@@ -75,7 +75,7 @@ class EducationArticle extends Model
     }
 
     /**
-     * Accessor untuk mendapatkan URL gambar yang lengkap dengan localhost:8000
+     * Accessor untuk mendapatkan URL gambar yang lengkap
      */
     public function getMainImageUrlAttribute()
     {
@@ -86,12 +86,14 @@ class EducationArticle extends Model
                 $imagePath = 'storage/' . ltrim($imagePath, '/');
             }
             
-            // Return URL lengkap dengan localhost:8000
-            return 'http://localhost:8000/' . $imagePath;
+            // Gunakan config untuk base URL agar lebih fleksibel
+            $baseUrl = config('app.url', 'http://localhost:8000');
+            return $baseUrl . '/' . $imagePath;
         }
         
         // URL placeholder jika tidak ada gambar
-        return 'http://localhost:8000/storage/placeholder/article-placeholder.jpg';
+        $baseUrl = config('app.url', 'http://localhost:8000');
+        return $baseUrl . '/storage/placeholder/article-placeholder.jpg';
     }
 
     /**
@@ -108,11 +110,25 @@ class EducationArticle extends Model
 
     /**
      * Scope untuk mengambil hanya artikel yang sudah dipublikasikan.
+     * Diperbaiki untuk menghindari masalah dengan artikel yang tidak muncul
      */
     public function scopePublished($query)
     {
         return $query->where('status', 'published')
-                    ->where('published_at', '<=', now());
+                    ->whereNotNull('published_at');
+                    // Hapus kondisi <= now() untuk debugging
+                    // ->where('published_at', '<=', now());
+    }
+
+    /**
+     * Scope untuk debugging - menampilkan semua artikel termasuk draft
+     */
+    public function scopeWithStatus($query, $status = null)
+    {
+        if ($status) {
+            return $query->where('status', $status);
+        }
+        return $query;
     }
 
     /**
@@ -127,5 +143,36 @@ class EducationArticle extends Model
         $array['formatted_published_at'] = $this->formatted_published_at;
         
         return $array;
+    }
+
+    /**
+     * Method untuk debugging - cek artikel yang ada
+     */
+    public static function debugArticles()
+    {
+        $allArticles = self::all();
+        $publishedArticles = self::published()->get();
+        
+        \Log::info('=== DEBUGGING ARTICLES ===');
+        \Log::info('Total articles in database: ' . $allArticles->count());
+        \Log::info('Published articles: ' . $publishedArticles->count());
+        
+        foreach ($allArticles as $article) {
+            \Log::info("Article: {$article->title} | Status: {$article->status} | Published At: " . 
+                      ($article->published_at ? $article->published_at->format('Y-m-d H:i:s') : 'NULL'));
+        }
+        
+        return [
+            'total' => $allArticles->count(),
+            'published' => $publishedArticles->count(),
+            'articles' => $allArticles->map(function($article) {
+                return [
+                    'id' => $article->id,
+                    'title' => $article->title,
+                    'status' => $article->status,
+                    'published_at' => $article->published_at ? $article->published_at->format('Y-m-d H:i:s') : null,
+                ];
+            })
+        ];
     }
 }

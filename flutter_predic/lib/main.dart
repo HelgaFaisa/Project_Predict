@@ -1,6 +1,8 @@
-// lib/main.dart - VERSI DENGAN ROUTING DINAMIS + EDUCATION DETAIL
+// lib/main.dart - VERSI DENGAN ROUTING DINAMIS + EDUCATION DETAIL + DevicePreview
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // Untuk kDebugMode
+import 'package:device_preview/device_preview.dart'; // Import DevicePreview
 import 'package:flutter_predic/model/ProfileEdit.dart';
 import 'splashscreen_page.dart';
 import 'home_page.dart';
@@ -25,24 +27,37 @@ import 'model/ProfileEdit.dart';
 import 'model/ProfileHeader.dart';
 import '../logindokter/profile.dart';
 import 'package:intl/date_symbol_data_local.dart';
-Future<void> main() async { // Tambahkan async
+
+Future<void> main() async {
   // Pastikan Flutter bindings sudah siap sebelum menjalankan kode async apa pun
   WidgetsFlutterBinding.ensureInitialized(); 
 
   // Inisialisasi data lokalisasi untuk Bahasa Indonesia
   await initializeDateFormatting('id_ID', null); 
 
-  runApp( MyApp()); // Ganti MyApp dengan nama class root aplikasi Anda
+  // Jalankan aplikasi dengan DevicePreview hanya dalam mode debug
+  runApp(
+    DevicePreview(
+      enabled: !kReleaseMode, // Aktifkan DevicePreview hanya dalam mode debug/profile
+      builder: (context) => MyApp(),
+    ),
+  );
 }
+
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      // DevicePreview configuration
+      useInheritedMediaQuery: true,
+      locale: DevicePreview.locale(context),
+      builder: DevicePreview.appBuilder,
+      
       debugShowCheckedModeBanner: false,
       title: 'DiabetaCare',
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        fontFamily: 'Poppins',
+        fontFamily: 'Poppins', // Tetap gunakan Poppins atau ganti ke Roboto sesuai kebutuhan
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       initialRoute: '/',
